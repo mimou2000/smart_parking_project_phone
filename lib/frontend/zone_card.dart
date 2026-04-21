@@ -174,20 +174,11 @@ class ZoneCard extends StatelessWidget {
                   ),
                 const SizedBox(height: 6),
                 // معلومات إضافية
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
-                    if (dLabel != null && sortBy == 'dijkstra') ...[
-                      _chip2(dLabel, FontAwesomeIcons.networkWired, C.primary),
-                      const SizedBox(width: 6),
-                    ] else ...[
-                      _chip2("${zone.distance} كم",
-                          FontAwesomeIcons.route, C.accent),
-                      const SizedBox(width: 6),
-                    ],
-                    _chip2("${zone.pricePerHour.toInt()} دج/س",
-                        FontAwesomeIcons.tag, C.warning),
-                    const SizedBox(width: 6),
                     _chip2(
                       zone.isAvailable
                           ? "${zone.availableSpots}/${zone.totalSpots}"
@@ -195,6 +186,13 @@ class ZoneCard extends StatelessWidget {
                       FontAwesomeIcons.squareParking,
                       zone.isAvailable ? C.success : C.error,
                     ),
+                    _chip2("${zone.pricePerHour.toInt()} دج/س",
+                        FontAwesomeIcons.tag, C.warning),
+                    if (dLabel != null && sortBy == 'dijkstra')
+                      _chip2(dLabel, FontAwesomeIcons.networkWired, C.primary)
+                    else
+                      _chip2("${zone.distance} كم",
+                          FontAwesomeIcons.route, C.accent),
                   ],
                 ),
               ],
