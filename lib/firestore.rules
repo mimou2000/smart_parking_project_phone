@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ══ المستخدمون ══
+    match /users/{userId} {
+      allow read, update: if request.auth != null
+                          && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // ══ مناطق الوقوف ══
+    match /parkingZones/{zoneId} {
+      allow read: if request.auth != null;
+
+      // تحديث availableSpots من Transactions
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data)
+                       .affectedKeys().hasOnly(['availableSpots']);
+
+      // ══ المواقف الصغيرة — SPOTS ══
+      match /spots/{spotId} {
+        allow read: if request.auth != null;
+
+        // السماح بتحديث isTaken عبر Transactions
+        allow write: if request.auth != null
+                     && request.resource.data.diff(resource.data)
+                        .affectedKeys().hasOnly(['isTaken']);
+      }
+    }
+
+    // ══ الحجوزات ══
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data)
+                       .affectedKeys().hasOnly(['status'])
+                    && request.resource.data.status == 'cancelled';
+
+      allow delete: if false;
+    }
+
+    // ══ التقييمات ══
+    match /feedback/{feedbackId} {
+      // القراءة: الكل المسجّلين (لعرض التقييمات)
+      allow read: if request.auth != null;
+
+      // الإنشاء: المستخدم يرسل تقييمه
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      // لا تعديل ولا حذف
+      allow update, delete: if false;
+    }
+  }
+}
