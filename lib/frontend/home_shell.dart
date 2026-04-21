@@ -4,10 +4,9 @@ import 'main.dart';
 import 'search_page.dart';
 import 'bookings_page.dart';
 import 'profile_page.dart';
-import 'feedback_page.dart';
 
 // ════════════════════════════════════════════
-//  HomeShell — 4 تبويبات (البحث | حجوزاتي | تقييم | حسابي)
+//  HomeShell — 3 تبويبات (البحث | حجوزاتي | حسابي)
 // ════════════════════════════════════════════
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -21,7 +20,6 @@ class _HomeShellState extends State<HomeShell> {
   final List<Widget> _pages = const [
     SearchPage(),
     BookingsPage(),
-    FeedbackPage(),
     ProfilePage(),
   ];
 
@@ -52,8 +50,7 @@ class _HomeShellState extends State<HomeShell> {
             children: [
               _navItem(index: 0, icon: FontAwesomeIcons.mapLocationDot, label: "البحث"),
               _navItem(index: 1, icon: FontAwesomeIcons.rectangleList,   label: "حجوزاتي"),
-              _navItem(index: 2, icon: FontAwesomeIcons.commentDots,     label: "تقييم"),
-              _navItem(index: 3, icon: FontAwesomeIcons.circleUser,      label: "حسابي"),
+              _navItem(index: 2, icon: FontAwesomeIcons.circleUser,      label: "حسابي"),
             ],
           ),
         ),
