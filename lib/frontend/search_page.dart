@@ -567,89 +567,90 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    return Container(
-      color: C.light,
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text.rich(
+    return Column(
+      children: [
+        Container(
+          color: C.light,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: [
                     TextSpan(
-                      children: [
-                        TextSpan(
-                          text: "${filtered.length}",
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: C.primary),
-                        ),
-                        const TextSpan(
-                            text: " نتيجة",
-                            style: TextStyle(color: C.muted)),
-                        if (totalZonesCount > 10 &&
-                            filtered.length == 10 &&
-                            _searchCtrl.text.isEmpty)
-                          const TextSpan(
-                            text: " (أقرب 10)",
-                            style: TextStyle(
-                                color: C.muted, fontSize: 10),
-                          ),
-                      ],
+                      text: "${filtered.length}",
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: C.primary),
                     ),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  Row(children: [
-                    if (_sortBy == 'dijkstra' && _userLat != null)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [C.primary, C.secondary]),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(children: [
-                          Icon(FontAwesomeIcons.networkWired,
-                              size: 9, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text("Dijkstra",
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700)),
-                        ]),
-                      ),
-                    const Text("المواقف القريبة",
+                    const TextSpan(
+                        text: " نتيجة",
+                        style: TextStyle(color: C.muted)),
+                    if (totalZonesCount > 10 &&
+                        filtered.length == 10 &&
+                        _searchCtrl.text.isEmpty)
+                      const TextSpan(
+                        text: " (أقرب 10)",
                         style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: C.dark)),
-                  ]),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (_, i) => ZoneCard(
-                  zone: filtered[i],
-                  isSelected: _selectedZone?.id == filtered[i].id,
-                  dijkstraLabel: _dijkstraLabel(filtered[i].id),
-                  sortBy: _sortBy,
-                  mapController: _mapController,
-                  onSelect: (z) => setState(() => _selectedZone = z),
-                  userLat: _userLat,
-                  userLng: _userLng,
+                            color: C.muted, fontSize: 10),
+                      ),
+                  ],
                 ),
+                style: const TextStyle(fontSize: 12),
+              ),
+              Row(children: [
+                if (_sortBy == 'dijkstra' && _userLat != null)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [C.primary, C.secondary]),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(children: [
+                      Icon(FontAwesomeIcons.networkWired,
+                          size: 9, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text("Dijkstra",
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                const Text("المواقف القريبة",
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: C.dark)),
+              ]),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Container(
+            color: C.light,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, i) => ZoneCard(
+                zone: filtered[i],
+                isSelected: _selectedZone?.id == filtered[i].id,
+                dijkstraLabel: _dijkstraLabel(filtered[i].id),
+                sortBy: _sortBy,
+                mapController: _mapController,
+                onSelect: (z) => setState(() => _selectedZone = z),
+                userLat: _userLat,
+                userLng: _userLng,
               ),
             ),
-          ]),
+          ),
+        ),
+      ],
     );
   }
 
