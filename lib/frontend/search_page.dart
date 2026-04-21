@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'main.dart';
 import 'dijkstra_service.dart';
-import 'feedback_page.dart';
 import 'parking_zone.dart';
 import 'pulsing_dot.dart';
 import 'zone_card.dart';
@@ -255,29 +254,7 @@ class _SearchPageState extends State<SearchPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => _showQuickFeedback(context),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: C.warning.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border:
-                        Border.all(color: C.warning.withOpacity(0.4)),
-                  ),
-                  child: const Row(children: [
-                    Icon(FontAwesomeIcons.star,
-                        color: C.warning, size: 11),
-                    SizedBox(width: 5),
-                    Text("قيّم",
-                        style: TextStyle(
-                            color: C.warning,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-              ),
+              const SizedBox(width: 38),
               Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -494,8 +471,8 @@ class _SearchPageState extends State<SearchPage> {
           ...zones.map((zone) {
             final bool sel = _selectedZone?.id == zone.id;
             return Marker(
-              width: sel ? 130 : 90,
-              height: 44,
+              width: sel ? 100 : 80,
+              height: 36,
               point: LatLng(zone.lat, zone.lng),
               child: GestureDetector(
                 onTap: () {
@@ -505,7 +482,7 @@ class _SearchPageState extends State<SearchPage> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                      horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: zone.isAvailable
@@ -514,7 +491,7 @@ class _SearchPageState extends State<SearchPage> {
                               : [C.success, const Color(0xFF059669)])
                           : [C.error, const Color(0xFFDC2626)],
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
                         color: (zone.isAvailable ? C.success : C.error)
@@ -524,22 +501,25 @@ class _SearchPageState extends State<SearchPage> {
                       )
                     ],
                   ),
-                  child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(FontAwesomeIcons.squareParking,
-                            color: Colors.white, size: 12),
-                        const SizedBox(width: 5),
-                        Text(
-                          zone.isAvailable
-                              ? "${zone.availableSpots} متاح"
-                              : "ممتلئ",
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ]),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(FontAwesomeIcons.squareParking,
+                              color: Colors.white, size: 11),
+                          const SizedBox(width: 4),
+                          Text(
+                            zone.isAvailable
+                                ? "${zone.availableSpots}"
+                                : "ممتلئ",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ]),
+                  ),
                 ),
               ),
             );
@@ -656,51 +636,4 @@ class _SearchPageState extends State<SearchPage> {
 
   // ──────────────────────────────────────────────────────────────────────────
   //  Quick Feedback Sheet
-  // ──────────────────────────────────────────────────────────────────────────
-  void _showQuickFeedback(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        builder: (_, ctrl) => Container(
-          decoration: const BoxDecoration(
-            color: C.white,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: C.border,
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(0, 12, 0, 4),
-              child: Text("إرسال تقييم سريع",
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: C.dark)),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: ctrl,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: QuickFeedbackForm(),
-                ),
-              ),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
 }
