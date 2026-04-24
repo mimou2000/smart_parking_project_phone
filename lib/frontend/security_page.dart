@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import 'login_page.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 
 // ════════════════════════════════════════════
 //  صفحة الأمان وكلمة المرور
@@ -82,7 +83,7 @@ class _SecurityPageState extends State<SecurityPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _successMsg = 'تم تغيير كلمة المرور بنجاح';
+        _successMsg = tr('security_password_changed');
         _currentCtrl.clear();
         _newCtrl.clear();
         _confirmCtrl.clear();
@@ -131,21 +132,26 @@ class _SecurityPageState extends State<SecurityPage> {
 
   @override
   Widget build(BuildContext context) {
-    final email = FirebaseService.currentUser?.email ?? '—';
-    return Scaffold(
-      backgroundColor: C.light,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(email),
-            const SizedBox(height: 16),
-            _buildPasswordCard(),
-            const SizedBox(height: 12),
-            _buildAccountActions(),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) {
+        final email = FirebaseService.currentUser?.email ?? '—';
+        return Scaffold(
+          backgroundColor: C.light,
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildHeader(email),
+                const SizedBox(height: 16),
+                _buildPasswordCard(),
+                const SizedBox(height: 12),
+                _buildAccountActions(),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -169,8 +175,8 @@ class _SecurityPageState extends State<SecurityPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const SizedBox(width: 36),
-                  const Text('الأمان وكلمة المرور',
-                      style: TextStyle(
+                  Text(tr('security_title'),
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w800)),
@@ -182,7 +188,10 @@ class _SecurityPageState extends State<SecurityPage> {
                       decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(FontAwesomeIcons.arrowRight,
+                      child: Icon(
+                          AppLocale.current.languageCode == 'ar'
+                              ? FontAwesomeIcons.arrowRight
+                              : FontAwesomeIcons.arrowLeft,
                           color: Colors.white, size: 14),
                     ),
                   ),
@@ -227,12 +236,12 @@ class _SecurityPageState extends State<SecurityPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(FontAwesomeIcons.lock, size: 14, color: C.primary),
-              Text('تغيير كلمة المرور',
-                  style: TextStyle(
+              const Icon(FontAwesomeIcons.lock, size: 14, color: C.primary),
+              Text(tr('security_change_password'),
+                  style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: C.dark)),
@@ -240,7 +249,7 @@ class _SecurityPageState extends State<SecurityPage> {
           ),
           const SizedBox(height: 14),
           _buildField(
-            label: 'كلمة المرور الحالية',
+            label: tr('security_current_password'),
             ctrl: _currentCtrl,
             show: _showCurrent,
             onToggle: () => setState(() => _showCurrent = !_showCurrent),
@@ -248,15 +257,15 @@ class _SecurityPageState extends State<SecurityPage> {
           ),
           const SizedBox(height: 14),
           _buildField(
-            label: 'كلمة المرور الجديدة',
+            label: tr('security_new_password'),
             ctrl: _newCtrl,
             show: _showNew,
             onToggle: () => setState(() => _showNew = !_showNew),
-            hint: '6 أحرف على الأقل',
+            hint: '••••••••',
           ),
           const SizedBox(height: 14),
           _buildField(
-            label: 'تأكيد كلمة المرور الجديدة',
+            label: tr('security_confirm_new_password'),
             ctrl: _confirmCtrl,
             show: _showConfirm,
             onToggle: () => setState(() => _showConfirm = !_showConfirm),
@@ -304,8 +313,8 @@ class _SecurityPageState extends State<SecurityPage> {
                             valueColor:
                                 AlwaysStoppedAnimation(Colors.white))),
                     const SizedBox(width: 10),
-                    const Text('جاري الحفظ...',
-                        style: TextStyle(
+                    Text(tr('loading'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w700)),
@@ -313,8 +322,8 @@ class _SecurityPageState extends State<SecurityPage> {
                     const Icon(FontAwesomeIcons.check,
                         color: Colors.white, size: 14),
                     const SizedBox(width: 8),
-                    const Text('حفظ كلمة المرور الجديدة',
-                        style: TextStyle(
+                    Text(tr('security_update'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w700)),
@@ -420,14 +429,14 @@ class _SecurityPageState extends State<SecurityPage> {
           _actionTile(
             icon: FontAwesomeIcons.envelope,
             color: C.accent,
-            label: 'إرسال رابط استعادة عبر البريد',
+            label: tr('security_reset_email'),
             onTap: _handleSendReset,
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           _actionTile(
             icon: FontAwesomeIcons.rightFromBracket,
             color: C.error,
-            label: 'تسجيل الخروج من جميع الأجهزة',
+            label: tr('security_signout_all'),
             onTap: _handleSignOutAll,
           ),
         ],
@@ -449,7 +458,12 @@ class _SecurityPageState extends State<SecurityPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Icon(FontAwesomeIcons.angleLeft, size: 12, color: C.muted),
+            Icon(
+                AppLocale.current.languageCode == 'ar'
+                    ? FontAwesomeIcons.angleLeft
+                    : FontAwesomeIcons.angleRight,
+                size: 12,
+                color: C.muted),
             Row(children: [
               Text(label,
                   style: TextStyle(

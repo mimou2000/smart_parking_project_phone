@@ -4,6 +4,7 @@ import 'main.dart';
 import 'search_page.dart';
 import 'bookings_page.dart';
 import 'profile_page.dart';
+import '../backend/app_locale.dart';
 
 // ════════════════════════════════════════════
 //  HomeShell — 3 تبويبات (البحث | حجوزاتي | حسابي)
@@ -25,9 +26,14 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _buildBottomNav(),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) {
+        return Scaffold(
+          body: IndexedStack(index: _currentIndex, children: _pages),
+          bottomNavigationBar: _buildBottomNav(),
+        );
+      },
     );
   }
 
@@ -48,9 +54,9 @@ class _HomeShellState extends State<HomeShell> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(index: 0, icon: FontAwesomeIcons.mapLocationDot, label: "البحث"),
-              _navItem(index: 1, icon: FontAwesomeIcons.rectangleList,   label: "حجوزاتي"),
-              _navItem(index: 2, icon: FontAwesomeIcons.circleUser,      label: "حسابي"),
+              _navItem(index: 0, icon: FontAwesomeIcons.mapLocationDot, label: tr('nav_search')),
+              _navItem(index: 1, icon: FontAwesomeIcons.rectangleList,   label: tr('nav_bookings')),
+              _navItem(index: 2, icon: FontAwesomeIcons.circleUser,      label: tr('nav_profile')),
             ],
           ),
         ),

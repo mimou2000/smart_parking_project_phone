@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../backend/firebase_options.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 import 'login_page.dart';
 import 'home_shell.dart';
 
@@ -11,6 +13,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // تحميل اللغة المحفوظة قبل بدء التطبيق
+  await AppLocale.load();
   runApp(const SmartParkingApp());
 }
 
@@ -19,16 +23,37 @@ class SmartParkingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'SmartParking',
-      theme: ThemeData(
-        fontFamily: 'Tajawal',
-        colorScheme: ColorScheme.fromSeed(seedColor: C.primary),
-        useMaterial3: true,
-      ),
-      // ── بوابة المصادقة: تُبقي الجلسة محفوظة بعد إغلاق التطبيق ──
-      home: const AuthGate(),
+    // إعادة بناء MaterialApp عند تغيّر اللغة
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'SmartParking',
+          locale: locale,
+          supportedLocales: AppLocale.supported,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // فرض اتجاه RTL للعربية فقط، LTR للغات الأخرى
+          builder: (context, child) {
+            return Directionality(
+              textDirection: locale.languageCode == 'ar'
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          theme: ThemeData(
+            fontFamily: 'Tajawal',
+            colorScheme: ColorScheme.fromSeed(seedColor: C.primary),
+            useMaterial3: true,
+          ),
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }

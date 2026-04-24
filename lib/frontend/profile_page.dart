@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import 'login_page.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 import 'bookings_page.dart';
 import 'feedback_page.dart';
 import 'settings_page.dart';
@@ -16,6 +17,13 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: C.light,
       body: StreamBuilder<Map<String, dynamic>?>(
@@ -86,8 +94,8 @@ class ProfilePage extends StatelessWidget {
                       child: const Icon(FontAwesomeIcons.gear, color: Colors.white, size: 14),
                     ),
                   ),
-                  const Text("حسابي",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                  Text(tr('profile_title'),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(width: 36),
                 ],
               ),
@@ -242,17 +250,17 @@ class ProfilePage extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: Column(children: [
-        _menuItem(FontAwesomeIcons.userPen, "تعديل الملف الشخصي", C.primary, () => _editProfileDialog(ctx, name, email)),
+        _menuItem(FontAwesomeIcons.userPen, tr('edit'), C.primary, () => _editProfileDialog(ctx, name, email)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.car, "تعديل بيانات المركبة", C.accent, () => _editCarDialog(ctx, plate, carType, vehicleType)),
+        _menuItem(FontAwesomeIcons.car, tr('register_plate'), C.accent, () => _editCarDialog(ctx, plate, carType, vehicleType)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.star,         "التقييمات",           C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
+        _menuItem(FontAwesomeIcons.star,         tr('profile_ratings'),    C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.gear,         "الإعدادات",           const Color(0xFFF97316),  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+        _menuItem(FontAwesomeIcons.gear,         tr('profile_settings'),   const Color(0xFFF97316),  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SettingsPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.shieldHalved, "الأمان وكلمة المرور", C.secondary, () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SecurityPage()))),
+        _menuItem(FontAwesomeIcons.shieldHalved, tr('profile_security'),   C.secondary, () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SecurityPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.circleQuestion, "المساعدة والدعم",   C.muted,    () => _showHelpDialog(ctx)),
+        _menuItem(FontAwesomeIcons.circleQuestion, tr('profile_help'),     C.muted,    () => _showHelpDialog(ctx)),
       ]),
     );
   }
@@ -288,22 +296,19 @@ class ProfilePage extends StatelessWidget {
     showDialog(
       context: ctx,
       builder: (dCtx) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: AppLocale.textDirection,
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('المساعدة والدعم',
-              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-          content: const Text(
-            'للمساعدة والاستفسارات يمكنك التواصل معنا:\n\n'
-            '• البريد: support@smartparking.dz\n'
-            '• الهاتف: +213 555 000 000\n'
-            '• ساعات العمل: 24/7',
-            style: TextStyle(fontFamily: 'Tajawal', height: 1.6),
+          title: Text(tr('help_title'),
+              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          content: Text(
+            tr('help_body'),
+            style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dCtx),
-              child: const Text('موافق', style: TextStyle(fontFamily: 'Tajawal')),
+              child: Text(tr('ok'), style: const TextStyle(fontFamily: 'Tajawal')),
             ),
           ],
         ),
@@ -458,11 +463,11 @@ class ProfilePage extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: C.error.withOpacity(0.3)),
           ),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(FontAwesomeIcons.rightFromBracket, size: 14, color: C.error),
-            SizedBox(width: 8),
-            Text("تسجيل الخروج",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: C.error)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(FontAwesomeIcons.rightFromBracket, size: 14, color: C.error),
+            const SizedBox(width: 8),
+            Text(tr('profile_logout'),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: C.error)),
           ]),
         ),
       ),
