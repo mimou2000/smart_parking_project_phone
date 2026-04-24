@@ -146,6 +146,7 @@ class FirebaseService {
     required String password,
     required String name,
     required String carType,
+    required String carModel,
     required String plate,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
@@ -154,6 +155,7 @@ class FirebaseService {
         'name': name,
         'email': email,
         'carType': carType,
+        'carModel': carModel,
         'plate': plate.toUpperCase(),
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -185,7 +187,7 @@ class FirebaseService {
       // محاولة الحصول على الإحداثيات من Firestore
       double lat = (d['lat'] ?? d['latitude']) as double? ?? 0.0;
       double lng = (d['lng'] ?? d['longitude']) as double? ?? 0.0;
-      
+
       return RealSpot(
         docId: doc.id,
         spotName: d['spot_number'] ?? d['spotName'] ?? d['name'] ?? 'غير معروف',
