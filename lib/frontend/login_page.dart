@@ -174,37 +174,29 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Widget _buildBrand() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text("SmartParking",
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: C.dark)),
+            Text("نظام الإدارة الذكي",
+                style: TextStyle(fontSize: 11, color: C.muted)),
+          ],
+        ),
+        const SizedBox(width: 12),
         Container(
-          width: 64, height: 64,
+          width: 46, height: 46,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
               colors: [C.primary, C.secondary],
             ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: C.primary.withOpacity(0.30),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(FontAwesomeIcons.squareParking, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          "SmartParking",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: C.dark),
-        ),
-        const SizedBox(height: 3),
-        const Text(
-          "نظام الإدارة الذكي",
-          style: TextStyle(fontSize: 12, color: C.muted),
+          child: const Icon(FontAwesomeIcons.squareParking, color: Colors.white, size: 20),
         ),
       ],
     );
@@ -283,12 +275,12 @@ class _LoginPageState extends State<LoginPage>
             prefixIcon: Icon(icon, size: 15, color: C.muted),
             suffixIcon: isPassword
                 ? IconButton(
-              icon: Icon(
-                _showPass ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
-                size: 14, color: C.muted,
-              ),
-              onPressed: () => setState(() => _showPass = !_showPass),
-            )
+                    icon: Icon(
+                      _showPass ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
+                      size: 14, color: C.muted,
+                    ),
+                    onPressed: () => setState(() => _showPass = !_showPass),
+                  )
                 : null,
           ),
         ),
@@ -386,10 +378,10 @@ class _LoginPageState extends State<LoginPage>
           gradient: _loading
               ? null
               : const LinearGradient(
-            begin: Alignment.centerRight,
-            end:   Alignment.centerLeft,
-            colors: [C.primary, C.secondary],
-          ),
+                  begin: Alignment.centerRight,
+                  end:   Alignment.centerLeft,
+                  colors: [C.primary, C.secondary],
+                ),
           color: _loading ? C.border : null,
           borderRadius: BorderRadius.circular(10),
           boxShadow: _loading
