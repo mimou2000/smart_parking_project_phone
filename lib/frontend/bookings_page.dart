@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
-import '../backend/firebase_service.dart'; // يحتوي على BookingRecord الصحيح
+import '../backend/firebase_service.dart';
+import 'navigation_page.dart';
+import 'parking_zone.dart';
 
 // ════════════════════════════════════════════
 //  صفحة الحجوزات
@@ -196,32 +198,80 @@ class _BookingsPageState extends State<BookingsPage>
               _detail(FontAwesomeIcons.calendarDay,    b.dateLabel,               C.muted),
             ],
           ),
-          if (b.status == 'active') ...[
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => _confirmCancel(b),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: C.error.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: C.error.withOpacity(0.3)),
-                    ),
-                    child: const Row(children: [
-                      Icon(FontAwesomeIcons.ban, size: 11, color: C.error),
-                      SizedBox(width: 6),
-                      Text("إلغاء الحجز",
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.error)),
-                    ]),
+if (b.status == 'active') ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // زر إلغاء الحجز
+              GestureDetector(
+                onTap: () => _confirmCancel(b),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: C.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: C.error.withOpacity(0.3)),
                   ),
+                  child: const Row(children: [
+                    Icon(FontAwesomeIcons.ban, size: 11, color: C.error),
+                    SizedBox(width: 6),
+                    Text("إلغاء الحجز",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.error)),
+                  ]),
                 ),
-              ],
-            ),
-          ],
+              ),
+              // زر التوجه للموقف
+              GestureDetector(
+                onTap: () => _navigateToSpot(b),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [C.primary, C.secondary]),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(children: [
+                    Icon(FontAwesomeIcons.diamondTurnRight, size: 11, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text("توجه للموقف",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ]),
+                ),
+              ),
+            ],
+          ),
         ],
+      ],
+    ),
+  );
+}
+
+  void _navigateToSpot(BookingRecord b) {
+    // إنشاء ParkingZone مؤقت للتوجيه
+    final zone = ParkingZone(
+      id: b.zoneId,
+      name: b.zoneName,
+      address: b.address,
+      lat: b.zoneLat,
+      lng: b.zoneLng,
+      totalSpots: 0,
+      availableSpots: 0,
+      pricePerHour: 0,
+      pricePerDay: 0,
+      pricePerWeek: 0,
+      distance: 0,
+      spotTypes: {},
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NavigationPage(
+          zone: zone,
+          spotLat: b.spotLat,
+          spotLng: b.spotLng,
+          spotName: b.spotName,
+        ),
       ),
     );
   }

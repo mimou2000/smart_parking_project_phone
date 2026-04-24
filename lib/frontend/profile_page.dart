@@ -19,11 +19,12 @@ class ProfilePage extends StatelessWidget {
       body: StreamBuilder<Map<String, dynamic>?>(
         stream: FirebaseService.userProfileStream(),
         builder: (context, profileSnap) {
-          final profile = profileSnap.data;
+final profile = profileSnap.data;
           final name  = profile?['name']    as String? ?? 'المستخدم';
           final email = profile?['email']   as String? ?? FirebaseService.currentUser?.email ?? '';
           final plate = profile?['plate']   as String? ?? '—';
           final car   = profile?['carType'] as String? ?? '—';
+          final vehicleType = VehicleType.fromString(profile?['vehicleType'] as String?);
 
           return StreamBuilder<List<BookingRecord>>(
             stream: FirebaseService.myBookingsStream(),
@@ -36,9 +37,9 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildHeader(context, name, email),
-                    _buildCarCard(plate, car),
+_buildCarCard(plate, car, vehicleType),
                     _buildStatRow(bookings.length, totalPaid, totalHours),
-                    _buildMenuSection(context, name, email, plate, car),
+                    _buildMenuSection(context, name, email, plate, car, vehicleType),
                     const SizedBox(height: 24),
                     _buildLogoutBtn(context),
                     const SizedBox(height: 32),
@@ -125,7 +126,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildCarCard(String plate, String carType) {
+Widget _buildCarCard(String plate, String carType, VehicleType vehicleType) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(14),
@@ -137,19 +138,45 @@ class ProfilePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(FontAwesomeIcons.car, color: Colors.white38, size: 40),
+          Icon(_vehicleTypeIcon(vehicleType), color: Colors.white38, size: 40),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text("سيارتي", style: TextStyle(color: Colors.white60, fontSize: 11)),
+              const Text("مركبتي", style: TextStyle(color: Colors.white60, fontSize: 11)),
               const SizedBox(height: 4),
               Text(plate.isNotEmpty ? plate : '—',
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2)),
               const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(color: C.accent.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
-                child: Text(carType, style: const TextStyle(color: C.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _vehicleTypeColor(vehicleType).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(vehicleType.label,
+                            style: TextStyle(
+                                color: _vehicleTypeColor(vehicleType),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 4),
+                        Icon(_vehicleTypeIcon(vehicleType),
+                            size: 10, color: _vehicleTypeColor(vehicleType)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: C.accent.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                    child: Text(carType, style: const TextStyle(color: C.accent, fontSize: 10, fontWeight: FontWeight.w700)),
+                  ),
+                ],
               ),
             ],
           ),
@@ -190,7 +217,7 @@ class ProfilePage extends StatelessWidget {
     ]);
   }
 
-  Widget _buildMenuSection(BuildContext ctx, String name, String email, String plate, String carType) {
+Widget _buildMenuSection(BuildContext ctx, String name, String email, String plate, String carType, VehicleType vehicleType) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       decoration: BoxDecoration(
@@ -198,9 +225,9 @@ class ProfilePage extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: Column(children: [
-        _menuItem(FontAwesomeIcons.userPen,     "تعديل الملف الشخصي", C.primary,   () => _editProfileDialog(ctx, name, email)),
+        _menuItem(FontAwesomeIcons.userPen, "تعديل الملف الشخصي", C.primary, () => _editProfileDialog(ctx, name, email)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.car,          "تعديل بيانات السيارة", C.accent, () => _editCarDialog(ctx, plate, carType)),
+        _menuItem(FontAwesomeIcons.car, "تعديل بيانات المركبة", C.accent, () => _editCarDialog(ctx, plate, carType, vehicleType)),
         _menuDivider(),
         _menuItem(FontAwesomeIcons.star,         "التقييمات",           C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
         _menuDivider(),
@@ -267,31 +294,107 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Future<void> _editCarDialog(BuildContext ctx, String plate, String carType) async {
+Future<void> _editCarDialog(BuildContext ctx, String plate, String carType, VehicleType vehicleType) async {
     final plateCtrl = TextEditingController(text: plate);
+    VehicleType selectedType = vehicleType;
+    
     await showDialog(
       context: ctx,
-      builder: (dCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تعديل بيانات السيارة', textAlign: TextAlign.right,
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-        content: TextField(
-          controller: plateCtrl, textAlign: TextAlign.right,
-          decoration: const InputDecoration(labelText: 'رقم اللوحة'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('إلغاء')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: C.primary),
-            onPressed: () async {
-              await FirebaseService.updateProfile({'plate': plateCtrl.text.trim().toUpperCase()});
-              Navigator.pop(dCtx);
-            },
-            child: const Text('حفظ', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+      builder: (dCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('تعديل بيانات المركبة', textAlign: TextAlign.right,
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                TextField(
+                  controller: plateCtrl, textAlign: TextAlign.right,
+                  decoration: const InputDecoration(labelText: 'رقم اللوحة'),
+                ),
+                const SizedBox(height: 16),
+                const Text('نوع المركبة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: VehicleType.values.map((type) {
+                    final bool selected = selectedType == type;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() => selectedType = type),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: selected
+                              ? const LinearGradient(colors: [C.primary, C.secondary])
+                              : null,
+                          color: selected ? null : C.light,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: selected ? Colors.transparent : C.border,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(type.label,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected ? C.white : C.muted)),
+                            const SizedBox(width: 4),
+                            Icon(_vehicleTypeIcon(type),
+                                size: 12, color: selected ? C.white : _vehicleTypeColor(type)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('إلغاء')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: C.primary),
+              onPressed: () async {
+                await FirebaseService.updateProfile({
+                  'plate': plateCtrl.text.trim().toUpperCase(),
+                  'vehicleType': selectedType.spotType,
+                });
+                Navigator.pop(dCtx);
+              },
+              child: const Text('حفظ', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  IconData _vehicleTypeIcon(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return FontAwesomeIcons.car;
+      case VehicleType.vip:        return FontAwesomeIcons.crown;
+      case VehicleType.motorcycle: return FontAwesomeIcons.motorcycle;
+      case VehicleType.electric:   return FontAwesomeIcons.bolt;
+      case VehicleType.disabled:   return FontAwesomeIcons.wheelchair;
+    }
+  }
+
+  Color _vehicleTypeColor(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return C.muted;
+      case VehicleType.vip:        return Colors.amber.shade700;
+      case VehicleType.motorcycle: return Colors.orange;
+      case VehicleType.electric:   return Colors.green;
+      case VehicleType.disabled:   return Colors.blue;
+    }
   }
 
   Widget _buildLogoutBtn(BuildContext context) {

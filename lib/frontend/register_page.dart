@@ -28,6 +28,7 @@ class _RegisterPageState extends State<RegisterPage>
 
   String? _selectedBrand;
   String? _selectedModel;
+  VehicleType _vehicleType = VehicleType.standard;
 
   // ════════════════════════════════════════════
   //  قاعدة بيانات السيارات العالمية
@@ -246,12 +247,13 @@ class _RegisterPageState extends State<RegisterPage>
     setState(() { _loading = true; _errorMsg = null; });
     try {
       await FirebaseService.register(
-        email:    email,
-        password: pass,
-        name:     name,
-        plate:    plate,
-        carType:  _selectedBrand!,
-        carModel: _selectedModel!,
+        email:       email,
+        password:    pass,
+        name:        name,
+        plate:       plate,
+        carType:     _selectedBrand!,
+        carModel:    _selectedModel!,
+        vehicleType: _vehicleType,
       );
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
@@ -332,6 +334,8 @@ class _RegisterPageState extends State<RegisterPage>
           _sectionLabel("معلومات السيارة", FontAwesomeIcons.car),
           const SizedBox(height: 12),
           _buildField(label: "رقم لوحة السيارة", icon: FontAwesomeIcons.idCard, ctrl: _plateCtrl, hint: "123 ABC", isPassword: false),
+          const SizedBox(height: 14),
+          _buildVehicleTypeSelector(),
           const SizedBox(height: 14),
           _buildCarSection(),
 
@@ -776,5 +780,84 @@ class _RegisterPageState extends State<RegisterPage>
             style: TextStyle(fontSize: 13, color: C.muted)),
       ],
     );
+  }
+
+  // ════════════════════════════════════════════
+  //  اختيار نوع المركبة
+  // ════════════════════════════════════════════
+  Widget _buildVehicleTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Text("نوع المركبة",
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+        const SizedBox(height: 10),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: VehicleType.values.map((type) {
+            final bool selected = _vehicleType == type;
+            return GestureDetector(
+              onTap: () => setState(() => _vehicleType = type),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: selected
+                      ? const LinearGradient(colors: [C.primary, C.secondary])
+                      : null,
+                  color: selected ? null : C.light,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected ? Colors.transparent : C.border,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      type.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? C.white : C.muted,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      _vehicleTypeIcon(type),
+                      size: 14,
+                      color: selected ? C.white : _vehicleTypeColor(type),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  IconData _vehicleTypeIcon(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return FontAwesomeIcons.car;
+      case VehicleType.vip:        return FontAwesomeIcons.crown;
+      case VehicleType.motorcycle: return FontAwesomeIcons.motorcycle;
+      case VehicleType.electric:   return FontAwesomeIcons.bolt;
+      case VehicleType.disabled:   return FontAwesomeIcons.wheelchair;
+    }
+  }
+
+  Color _vehicleTypeColor(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return C.muted;
+      case VehicleType.vip:        return Colors.amber.shade700;
+      case VehicleType.motorcycle: return Colors.orange;
+      case VehicleType.electric:   return Colors.green;
+      case VehicleType.disabled:   return Colors.blue;
+    }
   }
 }
