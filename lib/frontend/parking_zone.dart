@@ -35,6 +35,9 @@ class ParkingZone {
 
   bool get isAvailable => availableSpots > 0;
 
+  /// تحذير: هذا الـ factory يُعيّن availableSpots = totalSpots دائماً.
+  /// استخدم [fromFirestoreWithAvailable] بدلاً منه للحصول على العدد الحقيقي.
+  @Deprecated('استخدم fromFirestoreWithAvailable لحساب المواقف المتاحة بدقة')
   factory ParkingZone.fromFirestore(DocumentSnapshot doc,
       {double? userLat, double? userLng}) {
     final data = doc.data() as Map<String, dynamic>;

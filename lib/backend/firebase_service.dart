@@ -2,6 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // ════════════════════════════════════════════
+// دالة مساعدة: تحويل أي قيمة (String أو num) إلى double بأمان
+// ════════════════════════════════════════════
+double _toDouble(dynamic value, [double fallback = 0.0]) {
+  if (value == null) return fallback;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString()) ?? fallback;
+}
+
+// ════════════════════════════════════════════
 // 1. تعريف نوع الحجز (Enum)
 // ════════════════════════════════════════════
 enum BookingType {
@@ -104,8 +113,8 @@ class RealSpot {
   final String spotName;
   final String spotType;
   final SpotStatus status;
-  final double lat;      // ← جديد: خط العرض
-  final double lng;      // ← جديد: خط الطول
+  final double lat;
+  final double lng;
 
   const RealSpot({
     required this.docId,
@@ -216,6 +225,11 @@ class FirebaseService {
 
   static Future<void> signOut() async => await _auth.signOut();
 
+  /// إرسال رابط إعادة تعيين كلمة المرور
+  static Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   // ── بيانات المستخدم ──
   static Stream<Map<String, dynamic>?> userProfileStream() {
     if (uid == null) return Stream.value(null);
@@ -255,22 +269,26 @@ class FirebaseService {
         .snapshots()
         .map((snap) => snap.docs.map((doc) {
       final d = doc.data();
-      // محاولة الحصول على الإحداثيات من Firestore
-      double lat = (d['lat'] ?? d['latitude']) as double? ?? 0.0;
-      double lng = (d['lng'] ?? d['longitude']) as double? ?? 0.0;
+
+      // ✅ إصلاح: تحويل الإحداثيات بأمان سواء كانت String أو num
+      final double lat = _toDouble(d['lat'] ?? d['latitude']);
+      final double lng = _toDouble(d['lng'] ?? d['longitude']);
+
+      // الحالة: نحوّلها للأحرف الكبيرة لضمان التوافق مع SpotStatus
+      final rawStatus = (d['status'] as String? ?? 'AVAILABLE').toUpperCase();
 
       return RealSpot(
         docId: doc.id,
         spotName: d['spot_number'] ?? d['spotName'] ?? d['name'] ?? 'غير معروف',
-        spotType: d['spot_type'] ?? d['spotType'] ?? d['type'] ?? 'عادي',
-        status: SpotStatus.fromString(d['status'] as String?),
+        spotType: (d['spot_type'] ?? d['spotType'] ?? d['type'] ?? 'STANDARD').toString().toUpperCase(),
+        status: SpotStatus.fromString(rawStatus),
         lat: lat,
         lng: lng,
       );
     }).toList());
   }
 
-// ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ──
+  // ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ──
   static Future<void> createBooking({
     required String zoneId,
     required String zoneName,
@@ -339,7 +357,7 @@ class FirebaseService {
         .snapshots()
         .map((snap) => snap.docs.map((doc) {
       final d = doc.data();
-return BookingRecord(
+      return BookingRecord(
         id: doc.id,
         zoneId: d['zone_id'] ?? '',
         zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
@@ -348,13 +366,13 @@ return BookingRecord(
         spotName: d['spot_number'] ?? 'موقف',
         startTime: (d['start_time'] as Timestamp?)?.toDate() ?? DateTime.now(),
         quantity: (d['duration'] ?? 0) as int,
-        totalPrice: (d['total_price'] ?? 0).toDouble(),
+        totalPrice: _toDouble(d['total_price']),  // ✅ إصلاح
         status: d['status'] ?? 'active',
         type: d['rate_type'] ?? 'hourly',
-        zoneLat: (d['zone_lat'] as num?)?.toDouble() ?? 0,
-        zoneLng: (d['zone_lng'] as num?)?.toDouble() ?? 0,
-        spotLat: (d['spot_lat'] as num?)?.toDouble() ?? 0,
-        spotLng: (d['spot_lng'] as num?)?.toDouble() ?? 0,
+        zoneLat: _toDouble(d['zone_lat']),  // ✅ إصلاح
+        zoneLng: _toDouble(d['zone_lng']),  // ✅ إصلاح
+        spotLat: _toDouble(d['spot_lat']),  // ✅ إصلاح
+        spotLng: _toDouble(d['spot_lng']),  // ✅ إصلاح
       );
     }).toList());
   }

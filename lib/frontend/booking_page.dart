@@ -426,26 +426,40 @@ class _BookingPageState extends State<BookingPage>
                 ),
               );
             }
-            if (snap.hasError || (snap.data?.isEmpty ?? true)) {
+            if (snap.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text("خطأ في تحميل المواقف: ${snap.error}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: C.error, fontSize: 12)),
+              );
+            }
+            if (snap.data?.isEmpty ?? true) {
               return const Padding(
                 padding: EdgeInsets.all(12),
-                child: Text("لا توجد مواقف متاحة",
+                child: Text("لا توجد مواقف مضافة لهذه المنطقة",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: C.muted, fontSize: 13)),
               );
             }
 
-            final spots = snap.data!;
-            
-            // ترتيب المواقف: المناسبة لنوع المركبة أولاً
-            final userSpotType = _userVehicleType.spotType;
+            // ── تطبيع جميع spotType للأحرف الكبيرة لضمان التوافق مع Firestore ──
+            final spots = snap.data!.map((s) => RealSpot(
+              docId:     s.docId,
+              spotName:  s.spotName,
+              spotType:  s.spotType.toUpperCase().trim(),
+              status:    s.status,
+              lat:       s.lat,
+              lng:       s.lng,
+            )).toList();
+
+            // ترتيب المواقف: المناسبة لنوع المركبة أولاً ثم المتاحة
+            final userSpotType = _userVehicleType.spotType.toUpperCase();
             final sortedSpots = List<RealSpot>.from(spots);
             sortedSpots.sort((a, b) {
-              // المواقف المناسبة لنوع المركبة تأتي أولاً
-              final aMatch = a.spotType.toUpperCase() == userSpotType ? 0 : 1;
-              final bMatch = b.spotType.toUpperCase() == userSpotType ? 0 : 1;
+              final aMatch = a.spotType == userSpotType ? 0 : 1;
+              final bMatch = b.spotType == userSpotType ? 0 : 1;
               if (aMatch != bMatch) return aMatch.compareTo(bMatch);
-              // ثم حسب التوفر
               if (a.isAvailable != b.isAvailable) return a.isAvailable ? -1 : 1;
               return 0;
             });
@@ -460,7 +474,7 @@ class _BookingPageState extends State<BookingPage>
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   children: [
-                    Icon(FontAwesomeIcons.circleExclamation, 
+                    Icon(FontAwesomeIcons.circleExclamation,
                         size: 24, color: C.warning.withOpacity(0.6)),
                     const SizedBox(height: 8),
                     const Text("لا توجد مواقف مناسبة لنوع مركبتك",
@@ -503,11 +517,11 @@ class _BookingPageState extends State<BookingPage>
             return Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: sortedGroups.map((entry) {
-                final type = entry.key;
+                final type = entry.key; // الآن دائماً أحرف كبيرة
                 final list = entry.value;
                 final color = _typeColor(type);
                 final icon = _typeIcon(type);
-                final isUserType = type.toUpperCase() == userSpotType;
+                final isUserType = type == userSpotType; // مقارنة مباشرة بدون toUpperCase
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -542,7 +556,7 @@ class _BookingPageState extends State<BookingPage>
                             decoration: BoxDecoration(
                               color: color.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
-                              border: isUserType 
+                              border: isUserType
                                   ? Border.all(color: C.success, width: 1.5)
                                   : null,
                             ),
@@ -630,25 +644,25 @@ class _BookingPageState extends State<BookingPage>
   bool _isSpotSuitableForVehicle(String spotType) {
     final userType = _userVehicleType.spotType.toUpperCase();
     final spot = spotType.toUpperCase();
-    
+
     // المطابقة المباشرة
     if (spot == userType) return true;
-    
+
     // السيارات العادية يمكنها استخدام مواقف STANDARD
     if (userType == 'STANDARD' && spot == 'STANDARD') return true;
-    
+
     // السيارات الفاخرة يمكنها استخدام VIP و STANDARD
     if (userType == 'VIP' && (spot == 'VIP' || spot == 'STANDARD')) return true;
-    
+
     // السيارات الكهربائية يمكنها استخدام ELECTRIC و STANDARD
     if (userType == 'ELECTRIC' && (spot == 'ELECTRIC' || spot == 'STANDARD')) return true;
-    
+
     // ذوي الاحتياجات الخاصة يمكنهم استخدام DISABLED و STANDARD
     if (userType == 'DISABLED' && (spot == 'DISABLED' || spot == 'STANDARD')) return true;
-    
+
     // الدراجات النارية فقط MOTORCYCLE
     if (userType == 'MOTORCYCLE' && spot == 'MOTORCYCLE') return true;
-    
+
     return false;
   }
 
@@ -1128,7 +1142,7 @@ class _BookingPageState extends State<BookingPage>
     });
 
     try {
-await FirebaseService.createBooking(
+      await FirebaseService.createBooking(
         zoneId:      widget.zone.id,
         zoneName:    widget.zone.name,
         address:     widget.zone.address,

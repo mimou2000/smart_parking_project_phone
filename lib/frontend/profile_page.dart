@@ -19,11 +19,12 @@ class ProfilePage extends StatelessWidget {
       body: StreamBuilder<Map<String, dynamic>?>(
         stream: FirebaseService.userProfileStream(),
         builder: (context, profileSnap) {
-final profile = profileSnap.data;
-          final name  = profile?['name']    as String? ?? 'المستخدم';
-          final email = profile?['email']   as String? ?? FirebaseService.currentUser?.email ?? '';
-          final plate = profile?['plate']   as String? ?? '—';
-          final car   = profile?['carType'] as String? ?? '—';
+          final profile = profileSnap.data;
+          final name  = profile?['name']     as String? ?? 'المستخدم';
+          final email = profile?['email']    as String? ?? FirebaseService.currentUser?.email ?? '';
+          final plate = profile?['plate']    as String? ?? '—';
+          final car   = profile?['carType']  as String? ?? '—';
+          final carModel = profile?['carModel'] as String? ?? '';
           final vehicleType = VehicleType.fromString(profile?['vehicleType'] as String?);
 
           return StreamBuilder<List<BookingRecord>>(
@@ -37,9 +38,9 @@ final profile = profileSnap.data;
                 child: Column(
                   children: [
                     _buildHeader(context, name, email),
-_buildCarCard(plate, car, vehicleType),
+                    _buildCarCard(plate, car, carModel, vehicleType),
                     _buildStatRow(bookings.length, totalPaid, totalHours),
-                    _buildMenuSection(context, name, email, plate, car, vehicleType),
+                    _buildMenuSection(context, name, email, plate, car, carModel, vehicleType),
                     const SizedBox(height: 24),
                     _buildLogoutBtn(context),
                     const SizedBox(height: 32),
@@ -126,7 +127,7 @@ _buildCarCard(plate, car, vehicleType),
     );
   }
 
-Widget _buildCarCard(String plate, String carType, VehicleType vehicleType) {
+  Widget _buildCarCard(String plate, String carType, String carModel, VehicleType vehicleType) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(14),
@@ -176,6 +177,14 @@ Widget _buildCarCard(String plate, String carType, VehicleType vehicleType) {
                     decoration: BoxDecoration(color: C.accent.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
                     child: Text(carType, style: const TextStyle(color: C.accent, fontSize: 10, fontWeight: FontWeight.w700)),
                   ),
+                  if (carModel.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text(carModel, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -217,7 +226,7 @@ Widget _buildCarCard(String plate, String carType, VehicleType vehicleType) {
     ]);
   }
 
-Widget _buildMenuSection(BuildContext ctx, String name, String email, String plate, String carType, VehicleType vehicleType) {
+  Widget _buildMenuSection(BuildContext ctx, String name, String email, String plate, String carType, String carModel, VehicleType vehicleType) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       decoration: BoxDecoration(
@@ -294,10 +303,10 @@ Widget _buildMenuSection(BuildContext ctx, String name, String email, String pla
     );
   }
 
-Future<void> _editCarDialog(BuildContext ctx, String plate, String carType, VehicleType vehicleType) async {
+  Future<void> _editCarDialog(BuildContext ctx, String plate, String carType, VehicleType vehicleType) async {
     final plateCtrl = TextEditingController(text: plate);
     VehicleType selectedType = vehicleType;
-    
+
     await showDialog(
       context: ctx,
       builder: (dCtx) => StatefulBuilder(

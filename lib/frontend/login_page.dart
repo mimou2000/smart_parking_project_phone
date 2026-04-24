@@ -332,46 +332,78 @@ class _LoginPageState extends State<LoginPage>
 
   Future<void> _showForgotPasswordDialog() async {
     final ctrl = TextEditingController();
+    bool sending = false;
+
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('استعادة كلمة المرور',
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('استعادة كلمة المرور',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          content: TextField(
+            controller: ctrl,
             textAlign: TextAlign.right,
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-        content: TextField(
-          controller: ctrl,
-          textAlign: TextAlign.right,
-          decoration: const InputDecoration(hintText: 'أدخل بريدك الإلكتروني'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: C.primary),
-            onPressed: () async {
-              if (ctrl.text.isNotEmpty) {
-                try {
-                  await FirebaseService.signIn(ctrl.text, ''); // يتسبب في خطأ — نستخدم sendPasswordResetEmail
-                } catch (_) {}
-                // استخدم auth مباشرة
-                try {
-                  await FirebaseService.currentUser?.reload();
-                } catch (_) {}
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: C.success,
-                    content: const Text('تم إرسال رابط الاستعادة إن كان الحساب موجوداً',
-                        style: TextStyle(fontFamily: 'Tajawal')),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                );
-              }
-            },
-            child: const Text('إرسال', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              hintText: 'أدخل بريدك الإلكتروني',
+              prefixIcon: Icon(Icons.email_outlined, size: 18),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: C.primary),
+              onPressed: sending
+                  ? null
+                  : () async {
+                      final email = ctrl.text.trim();
+                      if (email.isEmpty) return;
+                      setDialogState(() => sending = true);
+                      try {
+                        await FirebaseService.sendPasswordResetEmail(email);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: C.success,
+                            content: const Text(
+                                'تم إرسال رابط الاستعادة — تحقق من بريدك',
+                                style: TextStyle(fontFamily: 'Tajawal')),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                      } catch (e) {
+                        setDialogState(() => sending = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: C.error,
+                            content: Text(
+                                _friendlyError(e.toString()),
+                                style: const TextStyle(fontFamily: 'Tajawal')),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+              child: sending
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : const Text('إرسال',
+                      style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -136,15 +136,19 @@ class _SearchPageState extends State<SearchPage> {
 
         final allSpots = allSpotsSnap.docs;
 
+        // مقارنة الحالة بشكل غير حساس لحالة الأحرف
         final explicitAvailable = allSpots
-            .where((d) => (d.data()['status'] as String?) == 'available')
+            .where((d) {
+              final s = (d.data()['status'] as String? ?? '').toUpperCase();
+              return s == 'AVAILABLE';
+            })
             .length;
 
         int availableCount;
         if (explicitAvailable == 0 && allSpots.isNotEmpty) {
           availableCount = allSpots.where((d) {
-            final s = (d.data()['status'] as String?) ?? 'available';
-            return s != 'booked' && s != 'occupied' && s != 'reserved';
+            final s = (d.data()['status'] as String? ?? 'AVAILABLE').toUpperCase();
+            return s != 'BOOKED' && s != 'OCCUPIED' && s != 'RESERVED' && s != 'MAINTENANCE';
           }).length;
         } else {
           availableCount = explicitAvailable;

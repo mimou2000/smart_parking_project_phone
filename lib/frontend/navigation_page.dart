@@ -1142,7 +1142,7 @@ class _NavigationPageState extends State<NavigationPage>
                     fontWeight: FontWeight.w700,
                     color: C.dark)),
             const SizedBox(height: 6),
-            Text('التوجيه إلى ${widget.zone.name}',
+            Text('التوجيه إلى ${widget.destinationName}',
                 style: const TextStyle(fontSize: 11, color: C.muted)),
           ]),
         ),
