@@ -5,6 +5,8 @@ import 'login_page.dart';
 import '../backend/firebase_service.dart';
 import 'bookings_page.dart';
 import 'feedback_page.dart';
+import 'settings_page.dart';
+import 'security_page.dart';
 
 // ════════════════════════════════════════════
 //  صفحة الحساب الشخصي — Firestore
@@ -73,10 +75,16 @@ class ProfilePage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(FontAwesomeIcons.gear, color: Colors.white, size: 14),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsPage()),
+                    ),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(FontAwesomeIcons.gear, color: Colors.white, size: 14),
+                    ),
                   ),
                   const Text("حسابي",
                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
@@ -240,11 +248,11 @@ class ProfilePage extends StatelessWidget {
         _menuDivider(),
         _menuItem(FontAwesomeIcons.star,         "التقييمات",           C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.bell,         "الإشعارات",           const Color(0xFFF97316),  () {}),
+        _menuItem(FontAwesomeIcons.gear,         "الإعدادات",           const Color(0xFFF97316),  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SettingsPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.shieldHalved, "الأمان وكلمة المرور", C.secondary, () {}),
+        _menuItem(FontAwesomeIcons.shieldHalved, "الأمان وكلمة المرور", C.secondary, () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SecurityPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.circleQuestion, "المساعدة والدعم",   C.muted,    () {}),
+        _menuItem(FontAwesomeIcons.circleQuestion, "المساعدة والدعم",   C.muted,    () => _showHelpDialog(ctx)),
       ]),
     );
   }
@@ -275,6 +283,33 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _menuDivider() => const Divider(height: 1, indent: 16, endIndent: 16);
+
+  void _showHelpDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      builder: (dCtx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('المساعدة والدعم',
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          content: const Text(
+            'للمساعدة والاستفسارات يمكنك التواصل معنا:\n\n'
+            '• البريد: support@smartparking.dz\n'
+            '• الهاتف: +213 555 000 000\n'
+            '• ساعات العمل: 24/7',
+            style: TextStyle(fontFamily: 'Tajawal', height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dCtx),
+              child: const Text('موافق', style: TextStyle(fontFamily: 'Tajawal')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _editProfileDialog(BuildContext ctx, String name, String email) async {
     final nameCtrl = TextEditingController(text: name);

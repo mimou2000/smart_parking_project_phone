@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../backend/firebase_options.dart';
+import '../backend/firebase_service.dart';
 import 'login_page.dart';
+import 'home_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +27,79 @@ class SmartParkingApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: C.primary),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      // ── بوابة المصادقة: تُبقي الجلسة محفوظة بعد إغلاق التطبيق ──
+      home: const AuthGate(),
+    );
+  }
+}
+
+// ════════════════════════════════════════════
+// AuthGate — يستمع لحالة تسجيل الدخول
+// إذا كان المستخدم مسجلاً مسبقاً → HomeShell مباشرة
+// وإلا → LoginPage
+// ════════════════════════════════════════════
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseService.authStateChanges(),
+      builder: (context, snapshot) {
+        // أثناء التحقق من الجلسة المحفوظة → شاشة بدء بسيطة
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _SplashScreen();
+        }
+        final user = snapshot.data;
+        if (user != null) {
+          return const HomeShell();
+        }
+        return const LoginPage();
+      },
+    );
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [C.panelDark1, C.panelDark2, C.panelDark3],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                "SmartParking",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'Tajawal'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
