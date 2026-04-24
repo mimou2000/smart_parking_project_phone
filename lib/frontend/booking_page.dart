@@ -138,30 +138,67 @@ class _BookingPageState extends State<BookingPage>
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => NavigationPage(zone: widget.zone),
+            child: Row(children: [
+              // ← جديد: زر توجيه الموقف (يظهر فقط عند اختيار موقف)
+              if (_selectedSpot != null) ...[
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NavigationPage(
+                        zone: widget.zone,
+                        destLat: _selectedSpot!.lat,
+                        destLng: _selectedSpot!.lng,
+                        destinationName: _selectedSpot!.spotName,
+                      ),
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                        color: C.primary,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: const Row(children: [
+                      Icon(FontAwesomeIcons.diamondTurnRight,
+                          color: Colors.white, size: 10),
+                      SizedBox(width: 3),
+                      Text("الموقف",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              // زر توجيه المنطقة
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => NavigationPage(zone: widget.zone),
+                  ),
+                ),
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: C.accent, borderRadius: BorderRadius.circular(10)),
+                  child: const Row(children: [
+                    Icon(FontAwesomeIcons.diamondTurnRight,
+                        color: Colors.white, size: 12),
+                    SizedBox(width: 5),
+                    Text("الاتجاه",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700)),
+                  ]),
                 ),
               ),
-              child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                    color: C.accent, borderRadius: BorderRadius.circular(10)),
-                child: const Row(children: [
-                  Icon(FontAwesomeIcons.diamondTurnRight,
-                      color: Colors.white, size: 12),
-                  SizedBox(width: 5),
-                  Text("الاتجاه",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700)),
-                ]),
-              ),
-            ),
+            ]),
           ),
         ],
       ),
