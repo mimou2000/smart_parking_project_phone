@@ -203,7 +203,7 @@ class FirebaseService {
 
   // ── دوال المصادقة ──
   // ملاحظة: على تطبيقات الجوال Firebase Auth يحافظ على الجلسة تلقائياً
-  // بحيث يبقى المستخدم مسجّلاً حتى بعد إغلاق التطبيق.
+  // بحيث ي��قى المستخدم مسجّلاً حتى بعد إغلاق التطبيق.
   static Future<UserCredential> signIn(String email, String password) async {
     return await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
@@ -392,34 +392,41 @@ class FirebaseService {
   }
 
   // ── حجوزاتي ──
+  // ملاحظة: نتجنّب orderBy على جانب الخادم لأنه يستلزم فهرس مركّب
+  // (user_id + created_at). عوضاً عن ذلك نُرتّب النتائج محلّياً.
   static Stream<List<BookingRecord>> myBookingsStream() {
     if (uid == null) return Stream.value([]);
 
     return _db.collection('reservations')
         .where('user_id', isEqualTo: uid)
-        .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) {
-      final d = doc.data();
-      return BookingRecord(
-        id: doc.id,
-        zoneId: d['zone_id'] ?? '',
-        zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
-        address: d['address'] ?? '',
-        spotId: d['spot_id'] ?? '',
-        spotName: d['spot_number'] ?? 'موقف',
-        startTime: (d['start_time'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        quantity: (d['duration'] ?? 0) as int,
-        totalPrice: _toDouble(d['total_price']),  // ✅ إصلاح
-        status: d['status'] ?? 'active',
-        type: d['rate_type'] ?? 'hourly',
-        zoneLat: _toDouble(d['zone_lat']),  // ✅ إصلاح
-        zoneLng: _toDouble(d['zone_lng']),  // ✅ إصلاح
-        spotLat: _toDouble(d['spot_lat']),  // ✅ إصلاح
-        spotLng: _toDouble(d['spot_lng']),  // ✅ إصلاح
-        userName: (d['user_name'] as String?) ?? '',
-      );
-    }).toList());
+        .map((snap) {
+      final list = snap.docs.map((doc) {
+        final d = doc.data();
+        return BookingRecord(
+          id: doc.id,
+          zoneId: d['zone_id'] ?? '',
+          zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
+          address: d['address'] ?? '',
+          spotId: d['spot_id'] ?? '',
+          spotName: d['spot_number'] ?? 'موقف',
+          startTime: (d['start_time'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          quantity: (d['duration'] ?? 0) as int,
+          totalPrice: _toDouble(d['total_price']),
+          status: d['status'] ?? 'active',
+          type: d['rate_type'] ?? 'hourly',
+          zoneLat: _toDouble(d['zone_lat']),
+          zoneLng: _toDouble(d['zone_lng']),
+          spotLat: _toDouble(d['spot_lat']),
+          spotLng: _toDouble(d['spot_lng']),
+          userName: (d['user_name'] as String?) ?? '',
+        );
+      }).toList();
+
+      // ترتيب محلي بحسب تاريخ الإنشاء (الأحدث أولاً) ثم البدء كاحتياطي
+      list.sort((a, b) => b.startTime.compareTo(a.startTime));
+      return list;
+    });
   }
 
   // ── إلغاء حجز ──

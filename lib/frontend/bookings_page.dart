@@ -40,6 +40,7 @@ class _BookingsPageState extends State<BookingsPage>
         builder: (context, snap) {
           final all = snap.data ?? [];
           final isLoading = snap.connectionState == ConnectionState.waiting;
+          final hasError = snap.hasError;
 
           return Column(
             children: [
@@ -48,14 +49,38 @@ class _BookingsPageState extends State<BookingsPage>
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator(color: C.primary))
-                    : TabBarView(
-                  controller: _tab,
-                  children: [
-                    _buildList(all, 'active'),
-                    _buildList(all, 'completed'),
-                    _buildList(all, 'cancelled'),
-                  ],
-                ),
+                    : hasError
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(FontAwesomeIcons.triangleExclamation,
+                                      size: 36, color: C.error),
+                                  const SizedBox(height: 12),
+                                  const Text('حدث خطأ في جلب الحجوزات',
+                                      style: TextStyle(
+                                          color: C.dark,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14)),
+                                  const SizedBox(height: 6),
+                                  Text('${snap.error}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: C.muted, fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tab,
+                            children: [
+                              _buildList(all, 'active'),
+                              _buildList(all, 'completed'),
+                              _buildList(all, 'cancelled'),
+                            ],
+                          ),
               ),
             ],
           );
