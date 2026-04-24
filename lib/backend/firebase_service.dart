@@ -142,6 +142,7 @@ class FirebaseService {
     required String password,
     required String name,
     required String carType,
+    required String carModel,
     required String plate,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
@@ -150,6 +151,7 @@ class FirebaseService {
         'name': name,
         'email': email,
         'carType': carType,
+        'carModel': carModel,
         'plate': plate.toUpperCase(),
         'createdAt': FieldValue.serverTimestamp(),
       });
