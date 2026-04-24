@@ -43,20 +43,12 @@ class NavigationPage extends StatefulWidget {
   final ParkingZone zone;
   final double? startLat;
   final double? startLng;
-  
-  // ← جديد: دعم التوجيه للموقف (Spot)
-  final double? destLat;
-  final double? destLng;
-  final String? destinationName;
 
   const NavigationPage({
     super.key,
     required this.zone,
     this.startLat,
     this.startLng,
-    this.destLat,
-    this.destLng,
-    this.destinationName,
   });
 
   @override
@@ -235,9 +227,8 @@ class _NavigationPageState extends State<NavigationPage>
       _error = null;
     });
 
-    // ← جديد: دعم التوجيه للموقف (Spot) أو المنطقة (Zone)
-    final destLat = widget.destLat ?? widget.zone.lat;
-    final destLng = widget.destLng ?? widget.zone.lng;
+    final destLat = widget.zone.lat;
+    final destLng = widget.zone.lng;
 
     // OSRM Public API — مجاني بدون key
     // steps=true → تعليمات turn-by-turn
@@ -348,12 +339,10 @@ class _NavigationPageState extends State<NavigationPage>
     if (_steps.isEmpty || _arrived) return;
 
     // فحص الوصول للوجهة النهائية (50 متر)
-    final destDist = _distanceTo(lat, lng, widget.destLat ?? widget.zone.lat, widget.destLng ?? widget.zone.lng);
+    final destDist = _distanceTo(lat, lng, widget.zone.lat, widget.zone.lng);
     if (destDist < 50) {
       setState(() => _arrived = true);
-      // ← جديد: عرض اسم المقصد (موقف أو منطقة)
-      final destName = widget.destinationName ?? widget.zone.name;
-      _speak('لقد وصلت إلى وجهتك، $destName');
+      _speak('لقد وصلت إلى وجهتك، موقف ${widget.zone.name}');
       return;
     }
 
@@ -1139,7 +1128,7 @@ class _NavigationPageState extends State<NavigationPage>
                     fontWeight: FontWeight.w700,
                     color: C.dark)),
             const SizedBox(height: 6),
-            Text('التوجيه إلى ${widget.destinationName ?? widget.zone.name}',
+            Text('التوجيه إلى ${widget.zone.name}',
                 style: const TextStyle(fontSize: 11, color: C.muted)),
           ]),
         ),

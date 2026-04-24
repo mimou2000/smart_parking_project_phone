@@ -4,6 +4,7 @@ import 'main.dart';
 import 'login_page.dart';
 import '../backend/firebase_service.dart';
 import 'bookings_page.dart';
+import 'feedback_page.dart';
 
 // ════════════════════════════════════════════
 //  صفحة الحساب الشخصي — Firestore
@@ -201,7 +202,9 @@ class ProfilePage extends StatelessWidget {
         _menuDivider(),
         _menuItem(FontAwesomeIcons.car,          "تعديل بيانات السيارة", C.accent, () => _editCarDialog(ctx, plate, carType)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.bell,         "الإشعارات",           C.warning,  () {}),
+        _menuItem(FontAwesomeIcons.star,         "التقييمات",           C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
+        _menuDivider(),
+        _menuItem(FontAwesomeIcons.bell,         "الإشعارات",           const Color(0xFFF97316),  () {}),
         _menuDivider(),
         _menuItem(FontAwesomeIcons.shieldHalved, "الأمان وكلمة المرور", C.secondary, () {}),
         _menuDivider(),
