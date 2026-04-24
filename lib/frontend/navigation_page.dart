@@ -43,13 +43,27 @@ class NavigationPage extends StatefulWidget {
   final ParkingZone zone;
   final double? startLat;
   final double? startLng;
+  // ── إحداثيات الموقف المحدد (اختياري) ──
+  final double? spotLat;
+  final double? spotLng;
+  final String? spotName;
 
   const NavigationPage({
     super.key,
     required this.zone,
     this.startLat,
     this.startLng,
+    this.spotLat,
+    this.spotLng,
+    this.spotName,
   });
+
+  // ── هل نتوجه للموقف المحدد أم للمنطقة ──
+  bool get hasSpotCoordinates => spotLat != null && spotLng != null && spotLat != 0 && spotLng != 0;
+  
+  double get destinationLat => hasSpotCoordinates ? spotLat! : zone.lat;
+  double get destinationLng => hasSpotCoordinates ? spotLng! : zone.lng;
+  String get destinationName => hasSpotCoordinates ? "موقف ${spotName ?? ''}" : zone.name;
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -227,8 +241,8 @@ class _NavigationPageState extends State<NavigationPage>
       _error = null;
     });
 
-    final destLat = widget.zone.lat;
-    final destLng = widget.zone.lng;
+    final destLat = widget.destinationLat;
+    final destLng = widget.destinationLng;
 
     // OSRM Public API — مجاني بدون key
     // steps=true → تعليمات turn-by-turn
@@ -339,10 +353,10 @@ class _NavigationPageState extends State<NavigationPage>
     if (_steps.isEmpty || _arrived) return;
 
     // فحص الوصول للوجهة النهائية (50 متر)
-    final destDist = _distanceTo(lat, lng, widget.zone.lat, widget.zone.lng);
+    final destDist = _distanceTo(lat, lng, widget.destinationLat, widget.destinationLng);
     if (destDist < 50) {
       setState(() => _arrived = true);
-      _speak('لقد وصلت إلى وجهتك، موقف ${widget.zone.name}');
+      _speak('لقد وصلت إلى وجهتك، ${widget.destinationName}');
       return;
     }
 
@@ -351,7 +365,7 @@ class _NavigationPageState extends State<NavigationPage>
       final stepDist = _distanceTo(lat, lng, _steps[i].location.latitude,
           _steps[i].location.longitude);
 
-      // إذا اقتربنا من نقطة التحويل (30 متر) → انتقل للخطوة التالية
+      // إذا اقتربنا من نقطة ال��حويل (30 متر) → انتقل للخطوة التالية
       if (stepDist < 30) {
         if (i + 1 < _steps.length && i + 1 != _currentStepIndex) {
           setState(() => _currentStepIndex = i + 1);
@@ -455,7 +469,7 @@ class _NavigationPageState extends State<NavigationPage>
               child: _buildProgressBar(remainingKm: (() {
                 if (_userLat == null) return _totalDistanceKm;
                 final d = Geolocator.distanceBetween(
-                    _userLat!, _userLng!, widget.zone.lat, widget.zone.lng);
+                    _userLat!, _userLng!, widget.destinationLat, widget.destinationLng);
                 return d / 1000;
               })()),
             ),
@@ -493,7 +507,7 @@ class _NavigationPageState extends State<NavigationPage>
   Widget _buildMap() {
     final center = _userLat != null
         ? LatLng(_userLat!, _userLng!)
-        : LatLng(widget.zone.lat, widget.zone.lng);
+        : LatLng(widget.destinationLat, widget.destinationLng);
 
     return FlutterMap(
       mapController: _mapCtrl,
@@ -577,7 +591,7 @@ class _NavigationPageState extends State<NavigationPage>
           Marker(
             width: 56,
             height: 56,
-            point: LatLng(widget.zone.lat, widget.zone.lng),
+            point: LatLng(widget.destinationLat, widget.destinationLng),
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(colors: [C.primary, C.secondary]),
@@ -626,7 +640,7 @@ class _NavigationPageState extends State<NavigationPage>
     double remainingKm = _totalDistanceKm;
     if (_userLat != null) {
       final d = Geolocator.distanceBetween(
-          _userLat!, _userLng!, widget.zone.lat, widget.zone.lng);
+          _userLat!, _userLng!, widget.destinationLat, widget.destinationLng);
       remainingKm = d / 1000;
     }
     final distLabel = _formatDist(remainingKm * 1000);
@@ -1006,7 +1020,7 @@ class _NavigationPageState extends State<NavigationPage>
     double remainingKm = _totalDistanceKm;
     if (_userLat != null) {
       final d = Geolocator.distanceBetween(
-          _userLat!, _userLng!, widget.zone.lat, widget.zone.lng);
+          _userLat!, _userLng!, widget.destinationLat, widget.destinationLng);
       remainingKm = d / 1000;
     }
 

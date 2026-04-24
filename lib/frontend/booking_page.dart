@@ -31,6 +31,10 @@ class _BookingPageState extends State<BookingPage>
   bool _showFeedback = false;
   String? _errorMsg;
 
+  // ── نوع مركبة المستخدم ──
+  VehicleType _userVehicleType = VehicleType.standard;
+  bool _filterByVehicleType = true;
+
   late final AnimationController _anim;
   late final Animation<double> _fade;
 
@@ -41,6 +45,14 @@ class _BookingPageState extends State<BookingPage>
         vsync: this, duration: const Duration(milliseconds: 350));
     _fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
     _anim.forward();
+    _loadUserVehicleType();
+  }
+
+  Future<void> _loadUserVehicleType() async {
+    final vehicleType = await FirebaseService.getUserVehicleType();
+    if (mounted) {
+      setState(() => _userVehicleType = vehicleType);
+    }
   }
 
   @override
@@ -329,11 +341,78 @@ class _BookingPageState extends State<BookingPage>
         ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        const Text("اختر موقفك",
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: C.dark)),
+        // ── العنوان وفلتر نوع المركبة ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // زر الفلتر
+            GestureDetector(
+              onTap: () => setState(() => _filterByVehicleType = !_filterByVehicleType),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: _filterByVehicleType
+                      ? const LinearGradient(colors: [C.primary, C.secondary])
+                      : null,
+                  color: _filterByVehicleType ? null : C.light,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _filterByVehicleType ? Colors.transparent : C.border,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _filterByVehicleType ? "مناسب لمركبتي" : "الكل",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: _filterByVehicleType ? C.white : C.muted,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Icon(
+                      FontAwesomeIcons.filter,
+                      size: 10,
+                      color: _filterByVehicleType ? C.white : C.muted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Text("اختر موقفك",
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: C.dark)),
+          ],
+        ),
+        // ── عرض نوع مركبة المستخدم ──
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                "نوع مركبتك: ${_userVehicleType.label}",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: _vehicleTypeColorFor(_userVehicleType),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _vehicleTypeIconFor(_userVehicleType),
+                size: 11,
+                color: _vehicleTypeColorFor(_userVehicleType),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 10),
         StreamBuilder<List<RealSpot>>(
           stream: FirebaseService.spotsStream(widget.zone.id),
@@ -357,18 +436,78 @@ class _BookingPageState extends State<BookingPage>
             }
 
             final spots = snap.data!;
+            
+            // ترتيب المواقف: المناسبة لنوع المركبة أولاً
+            final userSpotType = _userVehicleType.spotType;
+            final sortedSpots = List<RealSpot>.from(spots);
+            sortedSpots.sort((a, b) {
+              // المواقف المناسبة لنوع المركبة تأتي أولاً
+              final aMatch = a.spotType.toUpperCase() == userSpotType ? 0 : 1;
+              final bMatch = b.spotType.toUpperCase() == userSpotType ? 0 : 1;
+              if (aMatch != bMatch) return aMatch.compareTo(bMatch);
+              // ثم حسب التوفر
+              if (a.isAvailable != b.isAvailable) return a.isAvailable ? -1 : 1;
+              return 0;
+            });
+
+            // فلترة حسب نوع المركبة إذا كان الفلتر مفعلاً
+            final filteredSpots = _filterByVehicleType
+                ? sortedSpots.where((s) => _isSpotSuitableForVehicle(s.spotType)).toList()
+                : sortedSpots;
+
+            if (filteredSpots.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Icon(FontAwesomeIcons.circleExclamation, 
+                        size: 24, color: C.warning.withOpacity(0.6)),
+                    const SizedBox(height: 8),
+                    const Text("لا توجد مواقف مناسبة لنوع مركبتك",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: C.muted, fontSize: 12)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _filterByVehicleType = false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: C.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text("عرض كل المواقف",
+                            style: TextStyle(
+                                color: C.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             final grouped = <String, List<RealSpot>>{};
-            for (final s in spots) {
+            for (final s in filteredSpots) {
               grouped.putIfAbsent(s.spotType, () => []).add(s);
             }
 
+            // ترتيب المجموعات: المناسبة لنوع المركبة أولاً
+            final sortedGroups = grouped.entries.toList();
+            sortedGroups.sort((a, b) {
+              final aMatch = a.key.toUpperCase() == userSpotType ? 0 : 1;
+              final bMatch = b.key.toUpperCase() == userSpotType ? 0 : 1;
+              return aMatch.compareTo(bMatch);
+            });
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: grouped.entries.map((entry) {
+              children: sortedGroups.map((entry) {
                 final type = entry.key;
                 final list = entry.value;
                 final color = _typeColor(type);
                 final icon = _typeIcon(type);
+                final isUserType = type.toUpperCase() == userSpotType;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -378,6 +517,20 @@ class _BookingPageState extends State<BookingPage>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          if (isUserType)
+                            Container(
+                              margin: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: C.success.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text("مناسب",
+                                  style: TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                      color: C.success)),
+                            ),
                           Text(type,
                               style: TextStyle(
                                   fontSize: 11,
@@ -389,6 +542,9 @@ class _BookingPageState extends State<BookingPage>
                             decoration: BoxDecoration(
                               color: color.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
+                              border: isUserType 
+                                  ? Border.all(color: C.success, width: 1.5)
+                                  : null,
                             ),
                             child: Icon(icon, size: 11, color: color),
                           ),
@@ -468,6 +624,54 @@ class _BookingPageState extends State<BookingPage>
         ]),
       ]),
     );
+  }
+
+  // ── التحقق من مناسبة الموقف لنوع المركبة ──
+  bool _isSpotSuitableForVehicle(String spotType) {
+    final userType = _userVehicleType.spotType.toUpperCase();
+    final spot = spotType.toUpperCase();
+    
+    // المطابقة المباشرة
+    if (spot == userType) return true;
+    
+    // السيارات العادية يمكنها استخدام مواقف STANDARD
+    if (userType == 'STANDARD' && spot == 'STANDARD') return true;
+    
+    // السيارات الفاخرة يمكنها استخدام VIP و STANDARD
+    if (userType == 'VIP' && (spot == 'VIP' || spot == 'STANDARD')) return true;
+    
+    // السيارات الكهربائية يمكنها استخدام ELECTRIC و STANDARD
+    if (userType == 'ELECTRIC' && (spot == 'ELECTRIC' || spot == 'STANDARD')) return true;
+    
+    // ذوي الاحتياجات الخاصة يمكنهم استخدام DISABLED و STANDARD
+    if (userType == 'DISABLED' && (spot == 'DISABLED' || spot == 'STANDARD')) return true;
+    
+    // الدراجات النارية فقط MOTORCYCLE
+    if (userType == 'MOTORCYCLE' && spot == 'MOTORCYCLE') return true;
+    
+    return false;
+  }
+
+  // ── أيقونة نوع المركبة ──
+  IconData _vehicleTypeIconFor(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return FontAwesomeIcons.car;
+      case VehicleType.vip:        return FontAwesomeIcons.crown;
+      case VehicleType.motorcycle: return FontAwesomeIcons.motorcycle;
+      case VehicleType.electric:   return FontAwesomeIcons.bolt;
+      case VehicleType.disabled:   return FontAwesomeIcons.wheelchair;
+    }
+  }
+
+  // ── لون نوع المركبة ──
+  Color _vehicleTypeColorFor(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return C.muted;
+      case VehicleType.vip:        return Colors.amber.shade700;
+      case VehicleType.motorcycle: return Colors.orange;
+      case VehicleType.electric:   return Colors.green;
+      case VehicleType.disabled:   return Colors.blue;
+    }
   }
 
   // ══ اختيار نوع الحجز ══
@@ -715,6 +919,58 @@ class _BookingPageState extends State<BookingPage>
   Widget _buildBookBtn() {
     if (_paid) {
       return Column(children: [
+        // ── زر التوجه للموقف ──
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NavigationPage(
+                zone: widget.zone,
+                spotLat: _selectedSpot?.lat,
+                spotLng: _selectedSpot?.lng,
+                spotName: _selectedSpot?.spotName,
+              ),
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [C.primary, C.secondary],
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: C.primary.withOpacity(0.35),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(FontAwesomeIcons.diamondTurnRight,
+                    color: Colors.white, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  _selectedSpot?.lat != null && _selectedSpot!.lat != 0
+                      ? "توجه إلى الموقف ${_selectedSpot!.spotName}"
+                      : "توجه إلى المنطقة",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // ── زر العودة للصفحة الرئيسية ──
         GestureDetector(
           onTap: () => Navigator.pushAndRemoveUntil(
             context,
@@ -872,7 +1128,7 @@ class _BookingPageState extends State<BookingPage>
     });
 
     try {
-      await FirebaseService.createBooking(
+await FirebaseService.createBooking(
         zoneId:      widget.zone.id,
         zoneName:    widget.zone.name,
         address:     widget.zone.address,
@@ -882,6 +1138,10 @@ class _BookingPageState extends State<BookingPage>
         bookingType: _bookingType,
         quantity:    _quantity,
         totalPrice:  _total,
+        zoneLat:     widget.zone.lat,
+        zoneLng:     widget.zone.lng,
+        spotLat:     _selectedSpot!.lat,
+        spotLng:     _selectedSpot!.lng,
       );
 
       if (!mounted) return;

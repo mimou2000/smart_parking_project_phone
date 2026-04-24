@@ -35,6 +35,47 @@ enum BookingType {
 }
 
 // ════════════════════════════════════════════
+// نوع المركبة (VehicleType)
+// ════════════════════════════════════════════
+enum VehicleType {
+  standard,      // سيارة عادية
+  vip,           // سيارة فاخرة
+  motorcycle,    // دراجة نارية
+  electric,      // سيارة كهربائية
+  disabled;      // ذوي الاحتياجات الخاصة
+
+  String get label {
+    switch (this) {
+      case VehicleType.standard:   return 'سيارة عادية';
+      case VehicleType.vip:        return 'سيارة فاخرة';
+      case VehicleType.motorcycle: return 'دراجة نارية';
+      case VehicleType.electric:   return 'سيارة كهربائية';
+      case VehicleType.disabled:   return 'ذوي الاحتياجات الخاصة';
+    }
+  }
+
+  String get spotType {
+    switch (this) {
+      case VehicleType.standard:   return 'STANDARD';
+      case VehicleType.vip:        return 'VIP';
+      case VehicleType.motorcycle: return 'MOTORCYCLE';
+      case VehicleType.electric:   return 'ELECTRIC';
+      case VehicleType.disabled:   return 'DISABLED';
+    }
+  }
+
+  static VehicleType fromString(String? s) {
+    switch (s?.toUpperCase()) {
+      case 'VIP':        return VehicleType.vip;
+      case 'MOTORCYCLE': return VehicleType.motorcycle;
+      case 'ELECTRIC':   return VehicleType.electric;
+      case 'DISABLED':   return VehicleType.disabled;
+      default:           return VehicleType.standard;
+    }
+  }
+}
+
+// ════════════════════════════════════════════
 // 2. نموذج بيانات الموقف (RealSpot)
 // ════════════════════════════════════════════
 // ════════════════════════════════════════════
@@ -84,8 +125,8 @@ class RealSpot {
 class BookingRecord {
   final String id;
   final String zoneId;
-  final String zoneName;        // ← تمت إضافته
-  final String address;         // ← تمت إضافته
+  final String zoneName;
+  final String address;
   final String spotId;
   final String spotName;
   final DateTime startTime;
@@ -93,6 +134,11 @@ class BookingRecord {
   final double totalPrice;
   final String status;
   final String type;            // 'hourly', 'daily', 'weekly'
+  // ── إحداثيات المنطقة والموقف ──
+  final double zoneLat;
+  final double zoneLng;
+  final double spotLat;
+  final double spotLng;
 
   BookingRecord({
     required this.id,
@@ -106,6 +152,10 @@ class BookingRecord {
     required this.totalPrice,
     required this.status,
     required this.type,
+    this.zoneLat = 0,
+    this.zoneLng = 0,
+    this.spotLat = 0,
+    this.spotLng = 0,
   });
 
   // دوال مساعدة للعرض في BookingsPage
@@ -148,6 +198,7 @@ class FirebaseService {
     required String carType,
     required String carModel,
     required String plate,
+    required VehicleType vehicleType,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     if (cred.user != null) {
@@ -157,6 +208,7 @@ class FirebaseService {
         'carType': carType,
         'carModel': carModel,
         'plate': plate.toUpperCase(),
+        'vehicleType': vehicleType.spotType,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
@@ -173,6 +225,25 @@ class FirebaseService {
   static Future<void> updateProfile(Map<String, dynamic> data) async {
     if (uid == null) return;
     await _db.collection('users').doc(uid).update(data);
+  }
+
+  // ── الحصول على نوع مركبة المستخدم ──
+  static Future<VehicleType> getUserVehicleType() async {
+    if (uid == null) return VehicleType.standard;
+    final doc = await _db.collection('users').doc(uid).get();
+    final data = doc.data();
+    if (data == null) return VehicleType.standard;
+    return VehicleType.fromString(data['vehicleType'] as String?);
+  }
+
+  // ── Stream نوع مركبة المستخدم ──
+  static Stream<VehicleType> userVehicleTypeStream() {
+    if (uid == null) return Stream.value(VehicleType.standard);
+    return _db.collection('users').doc(uid).snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null) return VehicleType.standard;
+      return VehicleType.fromString(data['vehicleType'] as String?);
+    });
   }
 
   // ── Stream المواقف (مستخدم في BookingPage) ──
@@ -199,7 +270,7 @@ class FirebaseService {
     }).toList());
   }
 
-  // ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ──
+// ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ──
   static Future<void> createBooking({
     required String zoneId,
     required String zoneName,
@@ -210,6 +281,10 @@ class FirebaseService {
     required BookingType bookingType,
     required int quantity,
     required double totalPrice,
+    double zoneLat = 0,
+    double zoneLng = 0,
+    double spotLat = 0,
+    double spotLng = 0,
   }) async {
     if (uid == null) throw Exception("يجب تسجيل الدخول أولاً");
 
@@ -236,6 +311,10 @@ class FirebaseService {
       'status':         'active',
       'source':         'APP',
       'reservation_id': bookingRef.id,
+      'zone_lat':       zoneLat,
+      'zone_lng':       zoneLng,
+      'spot_lat':       spotLat,
+      'spot_lng':       spotLng,
       'start_time':     FieldValue.serverTimestamp(),
       'created_at':     FieldValue.serverTimestamp(),
     });
@@ -260,7 +339,7 @@ class FirebaseService {
         .snapshots()
         .map((snap) => snap.docs.map((doc) {
       final d = doc.data();
-      return BookingRecord(
+return BookingRecord(
         id: doc.id,
         zoneId: d['zone_id'] ?? '',
         zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
@@ -272,6 +351,10 @@ class FirebaseService {
         totalPrice: (d['total_price'] ?? 0).toDouble(),
         status: d['status'] ?? 'active',
         type: d['rate_type'] ?? 'hourly',
+        zoneLat: (d['zone_lat'] as num?)?.toDouble() ?? 0,
+        zoneLng: (d['zone_lng'] as num?)?.toDouble() ?? 0,
+        spotLat: (d['spot_lat'] as num?)?.toDouble() ?? 0,
+        spotLng: (d['spot_lng'] as num?)?.toDouble() ?? 0,
       );
     }).toList());
   }
