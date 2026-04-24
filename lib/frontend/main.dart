@@ -37,7 +37,8 @@ class SmartParkingApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          // فرض اتجاه RTL للعربية فقط، LTR للغات الأخرى
+          // فرض اتجاه النص بحسب اللغة في كل مكان داخل التطبيق
+          // (يُغطّي الحوارات والقوائم المنبثقة أيضاً)
           builder: (context, child) {
             return Directionality(
               textDirection: locale.languageCode == 'ar'

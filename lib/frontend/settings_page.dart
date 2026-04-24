@@ -437,26 +437,23 @@ class _SettingsPageState extends State<SettingsPage> {
     final current = AppLocale.current.languageCode;
     final selected = await showDialog<String>(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: AppLocale.textDirection,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(tr('settings_pick_language'),
-              style: const TextStyle(
-                  fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options
-                .map((o) => RadioListTile<String>(
-                      title: Text(o['name']!,
-                          style: const TextStyle(fontFamily: 'Tajawal')),
-                      value: o['code']!,
-                      groupValue: current,
-                      activeColor: C.primary,
-                      onChanged: (v) => Navigator.pop(ctx, v),
-                    ))
-                .toList(),
-          ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(tr('settings_pick_language'),
+            style: const TextStyle(
+                fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options
+              .map((o) => RadioListTile<String>(
+                    title: Text(o['name']!,
+                        style: const TextStyle(fontFamily: 'Tajawal')),
+                    value: o['code']!,
+                    groupValue: current,
+                    activeColor: C.primary,
+                    onChanged: (v) => Navigator.pop(ctx, v),
+                  ))
+              .toList(),
         ),
       ),
     );
@@ -469,25 +466,22 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showHelpDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: AppLocale.textDirection,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(tr('help_title'),
-              style: const TextStyle(
-                  fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-          content: Text(
-            tr('help_body'),
-            style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(tr('ok'),
-                  style: const TextStyle(fontFamily: 'Tajawal')),
-            ),
-          ],
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(tr('help_title'),
+            style: const TextStyle(
+                fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: Text(
+          tr('help_body'),
+          style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(tr('ok'),
+                style: const TextStyle(fontFamily: 'Tajawal')),
+          ),
+        ],
       ),
     );
   }
@@ -495,28 +489,25 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showTerms() {
     showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: AppLocale.textDirection,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(tr('terms_title'),
-              style: const TextStyle(
-                  fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-          content: SingleChildScrollView(
-            child: Text(
-              tr('terms_body'),
-              style: const TextStyle(
-                  fontFamily: 'Tajawal', height: 1.6, fontSize: 13),
-            ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(tr('terms_title'),
+            style: const TextStyle(
+                fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: SingleChildScrollView(
+          child: Text(
+            tr('terms_body'),
+            style: const TextStyle(
+                fontFamily: 'Tajawal', height: 1.6, fontSize: 13),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(tr('ok'),
-                  style: const TextStyle(fontFamily: 'Tajawal')),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(tr('ok'),
+                style: const TextStyle(fontFamily: 'Tajawal')),
+          ),
+        ],
       ),
     );
   }

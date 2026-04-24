@@ -266,6 +266,22 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _menuItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    final bool isRtl = AppLocale.current.languageCode == 'ar';
+    final Widget chevron = Icon(
+      isRtl ? FontAwesomeIcons.angleLeft : FontAwesomeIcons.angleRight,
+      size: 12,
+      color: C.muted,
+    );
+    final Widget leading = Row(children: [
+      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+      const SizedBox(width: 12),
+      Container(
+        width: 34, height: 34,
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 14, color: color),
+      ),
+    ]);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -273,18 +289,7 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Icon(FontAwesomeIcons.angleLeft, size: 12, color: C.muted),
-            Row(children: [
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
-              const SizedBox(width: 12),
-              Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 14, color: color),
-              ),
-            ]),
-          ],
+          children: isRtl ? [chevron, leading] : [leading, chevron],
         ),
       ),
     );
@@ -295,23 +300,20 @@ class ProfilePage extends StatelessWidget {
   void _showHelpDialog(BuildContext ctx) {
     showDialog(
       context: ctx,
-      builder: (dCtx) => Directionality(
-        textDirection: AppLocale.textDirection,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(tr('help_title'),
-              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-          content: Text(
-            tr('help_body'),
-            style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dCtx),
-              child: Text(tr('ok'), style: const TextStyle(fontFamily: 'Tajawal')),
-            ),
-          ],
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(tr('help_title'),
+            style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: Text(
+          tr('help_body'),
+          style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: Text(tr('ok'), style: const TextStyle(fontFamily: 'Tajawal')),
+          ),
+        ],
       ),
     );
   }
