@@ -382,7 +382,7 @@ class FirebaseService {
     });
 
     batch.update(spotRef, {
-      'status':     SpotStatus.occupied.toFirestore, // 'OCCUPIED'
+      'status':     SpotStatus.reserved.toFirestore, // 'RESERVED'
       'booked_by':  uid,
       'booking_id': bookingRef.id,
       'updated_at': FieldValue.serverTimestamp(),
@@ -392,7 +392,7 @@ class FirebaseService {
   }
 
   // ── حجوزاتي ──
-  // ملاحظة: نتجنّب orderBy على جانب الخادم لأنه يستلزم فهرس مركّب
+  // ملاحظة: نتجنّب orderBy على جانب الخادم لأنه يستلزم فهر�� مركّب
   // (user_id + created_at). عوضاً عن ذلك نُرتّب النتائج محلّياً.
   static Stream<List<BookingRecord>> myBookingsStream() {
     if (uid == null) return Stream.value([]);

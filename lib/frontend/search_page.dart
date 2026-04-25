@@ -9,6 +9,7 @@ import 'dijkstra_service.dart';
 import 'parking_zone.dart';
 import 'pulsing_dot.dart';
 import 'zone_card.dart';
+import '../backend/app_locale.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  صفحة البحث
@@ -54,7 +55,7 @@ class _SearchPageState extends State<SearchPage> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _snack('خدمة الموقع معطّلة، فعّلها من الإعدادات', isError: true);
+        _snack(tr('loc_disabled'), isError: true);
         setState(() => _locating = false);
         return;
       }
@@ -64,12 +65,12 @@ class _SearchPageState extends State<SearchPage> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied) {
-        _snack('تم رفض إذن الموقع', isError: true);
+        _snack(tr('loc_denied'), isError: true);
         setState(() => _locating = false);
         return;
       }
       if (permission == LocationPermission.deniedForever) {
-        _snack('الإذن محظور — افتح الإعدادات للسماح', isError: true);
+        _snack(tr('loc_blocked'), isError: true);
         await Geolocator.openAppSettings();
         setState(() => _locating = false);
         return;
@@ -91,9 +92,9 @@ class _SearchPageState extends State<SearchPage> {
       });
 
       _mapController.move(LatLng(pos.latitude, pos.longitude), 14.5);
-      _snack('تم تحديد موقعك ✓', isError: false);
+      _snack(tr('loc_set'), isError: false);
     } catch (e) {
-      _snack('تعذّر تحديد الموقع، حاول مجدداً', isError: true);
+      _snack(tr('loc_failed'), isError: true);
       setState(() => _locating = false);
     }
   }
@@ -216,6 +217,13 @@ class _SearchPageState extends State<SearchPage> {
   // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: C.light,
       body: StreamBuilder<List<ParkingZone>>(
@@ -262,15 +270,15 @@ class _SearchPageState extends State<SearchPage> {
               Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text("البحث عن موقف",
-                        style: TextStyle(
+                    Text(tr('search_title'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w800)),
                     Text(
                       _userLat != null
                           ? "${_userLat!.toStringAsFixed(3)}, ${_userLng!.toStringAsFixed(3)}"
-                          : "سطيف، الجزائر",
+                          : tr('city_default'),
                       style: const TextStyle(
                           color: Colors.white60, fontSize: 11),
                     ),
@@ -329,7 +337,7 @@ class _SearchPageState extends State<SearchPage> {
         onChanged: (_) => setState(() {}),
         style: const TextStyle(fontSize: 14, color: C.dark),
         decoration: InputDecoration(
-          hintText: "ابحث عن موقف أو عنوان...",
+          hintText: tr('search_hint'),
           hintStyle:
           const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           filled: true,
@@ -388,7 +396,7 @@ class _SearchPageState extends State<SearchPage> {
                     size: 10,
                     color: _showAvailableOnly ? C.white : C.muted),
                 const SizedBox(width: 5),
-                Text("متاح فقط",
+                Text(tr('available_only'),
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -401,13 +409,13 @@ class _SearchPageState extends State<SearchPage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                _chip("ذكي ⬡", 'dijkstra', FontAwesomeIcons.networkWired),
+                _chip(tr('sort_smart'), 'dijkstra', FontAwesomeIcons.networkWired),
                 const SizedBox(width: 6),
-                _chip("الأقرب", 'distance', FontAwesomeIcons.route),
+                _chip(tr('sort_nearest'), 'distance', FontAwesomeIcons.route),
                 const SizedBox(width: 6),
-                _chip("الأرخص", 'price', FontAwesomeIcons.tag),
+                _chip(tr('sort_cheapest'), 'price', FontAwesomeIcons.tag),
                 const SizedBox(width: 6),
-                _chip("الأكثر", 'spots', FontAwesomeIcons.squareParking),
+                _chip(tr('sort_most'), 'spots', FontAwesomeIcons.squareParking),
               ]),
             ),
           ),
@@ -515,7 +523,7 @@ class _SearchPageState extends State<SearchPage> {
                           Text(
                             zone.isAvailable
                                 ? "${zone.availableSpots}"
-                                : "ممتلئ",
+                                : tr('full'),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -544,8 +552,8 @@ class _SearchPageState extends State<SearchPage> {
               Icon(FontAwesomeIcons.circleXmark,
                   size: 32, color: C.muted.withOpacity(0.4)),
               const SizedBox(height: 10),
-              const Text("لا توجد نتائج",
-                  style: TextStyle(color: C.muted, fontSize: 14)),
+              Text(tr('no_results'),
+                  style: const TextStyle(color: C.muted, fontSize: 14)),
             ]),
       );
     }
@@ -560,8 +568,8 @@ class _SearchPageState extends State<SearchPage> {
             children: [
               // يمين في RTL: العنوان + Dijkstra badge
               Row(children: [
-                const Text("المواقف القريبة",
-                    style: TextStyle(
+                Text(tr('nearby_spots'),
+                    style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: C.dark)),
@@ -598,15 +606,15 @@ class _SearchPageState extends State<SearchPage> {
                           fontWeight: FontWeight.bold,
                           color: C.primary),
                     ),
-                    const TextSpan(
-                        text: " نتيجة",
-                        style: TextStyle(color: C.muted)),
+                    TextSpan(
+                        text: " ${tr('results_label')}",
+                        style: const TextStyle(color: C.muted)),
                     if (totalZonesCount > 10 &&
                         filtered.length == 10 &&
                         _searchCtrl.text.isEmpty)
-                      const TextSpan(
-                        text: " (أقرب 10)",
-                        style: TextStyle(
+                      TextSpan(
+                        text: " ${tr('top_10')}",
+                        style: const TextStyle(
                             color: C.muted, fontSize: 10),
                       ),
                   ],
