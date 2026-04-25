@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 
 // ════════════════════════════════════════════
 //  صفحة التقييمات الكاملة (تبويبان)
@@ -31,6 +32,13 @@ class _FeedbackPageState extends State<FeedbackPage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: C.light,
       body: Column(
@@ -78,16 +86,16 @@ class _FeedbackPageState extends State<FeedbackPage>
                   color: C.warning.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Row(children: [
-                  Icon(FontAwesomeIcons.star, color: C.warning, size: 11),
-                  SizedBox(width: 5),
-                  Text("ملاحظاتك تهمّنا",
-                      style: TextStyle(
+                child: Row(children: [
+                  const Icon(FontAwesomeIcons.star, color: C.warning, size: 11),
+                  const SizedBox(width: 5),
+                  Text(tr('feedback_matters'),
+                      style: const TextStyle(
                           color: C.warning, fontSize: 11, fontWeight: FontWeight.w700)),
                 ]),
               ),
-              const Text("التقييمات",
-                  style: TextStyle(
+              Text(tr('feedback_title'),
+                  style: const TextStyle(
                       color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
             ],
           ),
@@ -107,9 +115,9 @@ class _FeedbackPageState extends State<FeedbackPage>
         indicatorWeight: 2.5,
         labelStyle: const TextStyle(
             fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'Tajawal'),
-        tabs: const [
-          Tab(text: "أرسل تقييماً"),
-          Tab(text: "جميع التقييمات"),
+        tabs: [
+          Tab(text: tr('tab_submit')),
+          Tab(text: tr('tab_all')),
         ],
       ),
     );
@@ -163,11 +171,11 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
 
   Future<void> _submit() async {
     if (_rating == 0) {
-      setState(() => _errorMsg = 'يرجى اختيار تقييم بالنجوم');
+      setState(() => _errorMsg = tr('err_choose_rating'));
       return;
     }
     if (_msgCtrl.text.trim().length < 10) {
-      setState(() => _errorMsg = 'الرجاء كتابة ملاحظة مفصّلة (10 أحرف على الأقل)');
+      setState(() => _errorMsg = tr('err_message_short'));
       return;
     }
 
@@ -188,13 +196,13 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
       widget.onSubmitted?.call();
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _errorMsg = 'فشل الإرسال، حاول مجدداً'; });
+      setState(() { _loading = false; _errorMsg = tr('err_send_failed'); });
     }
   }
 
   void _reset() => setState(() {
     _rating = 0;
-    _category = widget.prefillCategory ?? 'عام';
+    _category = widget.prefillCategory ?? 'general';
     _submitted = false;
     _errorMsg = null;
     _msgCtrl.clear();
@@ -210,11 +218,11 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
         // ── بطاقة النجوم ──
         _card(child: Column(children: [
           if (widget.showTitle) ...[
-            const Text("كيف كانت تجربتك؟",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.dark)),
+            Text(tr('how_was_experience'),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.dark)),
             const SizedBox(height: 4),
-            const Text("اختر تقييمك من 1 إلى 5 نجوم",
-                style: TextStyle(fontSize: 11, color: C.muted)),
+            Text(tr('rating_subtitle'),
+                style: const TextStyle(fontSize: 11, color: C.muted)),
             const SizedBox(height: 16),
           ] else
             const SizedBox(height: 4),
@@ -253,8 +261,8 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
 
         // ── فئات ──
         _card(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          const Text("نوع الملاحظة",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
+          Text(tr('feedback_type'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
           const SizedBox(height: 12),
           Wrap(
             alignment: WrapAlignment.end,
@@ -275,7 +283,7 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
                     border: Border.all(
                         color: sel ? Colors.transparent : C.border, width: 1.5),
                   ),
-                  child: Text(cat,
+                  child: Text(_categoryLabel(cat),
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
                           color: sel ? C.white : C.muted)),
                 ),
@@ -288,8 +296,8 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
 
         // ── حقل النص ──
         _card(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          const Text("ملاحظاتك",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
+          Text(tr('your_feedback'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
           const SizedBox(height: 10),
           TextField(
             controller: _msgCtrl,
@@ -297,7 +305,7 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
             maxLength: 500,
             style: const TextStyle(fontSize: 13, color: C.dark),
             decoration: InputDecoration(
-              hintText: "اكتب ملاحظاتك هنا...",
+              hintText: tr('feedback_hint'),
               hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
               filled: true, fillColor: C.light,
               enabledBorder: OutlineInputBorder(
@@ -357,15 +365,15 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation(Colors.white))),
                 const SizedBox(width: 10),
-                const Text("جاري الإرسال...",
-                    style: TextStyle(color: Colors.white, fontSize: 14,
+                Text(tr('sending'),
+                    style: const TextStyle(color: Colors.white, fontSize: 14,
                         fontWeight: FontWeight.w700)),
               ] else ...[
                 const Icon(FontAwesomeIcons.paperPlane,
                     color: Colors.white, size: 14),
                 const SizedBox(width: 10),
-                const Text("إرسال التقييم",
-                    style: TextStyle(color: Colors.white, fontSize: 14,
+                Text(tr('send_feedback'),
+                    style: const TextStyle(color: Colors.white, fontSize: 14,
                         fontWeight: FontWeight.w700)),
               ],
             ]),
@@ -391,12 +399,12 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
               color: Colors.white, size: 34),
         ),
         const SizedBox(height: 20),
-        const Text("شكراً على تقييمك!",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: C.dark)),
+        Text(tr('thanks_for_feedback'),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: C.dark)),
         const SizedBox(height: 8),
-        const Text("لقد تلقّينا ملاحظاتك وسنعمل على تحسين خدماتنا",
+        Text(tr('feedback_received'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: C.muted, height: 1.6)),
+            style: const TextStyle(fontSize: 12, color: C.muted, height: 1.6)),
         const SizedBox(height: 24),
         GestureDetector(
           onTap: _reset,
@@ -408,11 +416,11 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
               boxShadow: [BoxShadow(
                   color: C.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(FontAwesomeIcons.plus, color: Colors.white, size: 12),
-              SizedBox(width: 8),
-              Text("إرسال تقييم آخر",
-                  style: TextStyle(color: Colors.white, fontSize: 12,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(FontAwesomeIcons.plus, color: Colors.white, size: 12),
+              const SizedBox(width: 8),
+              Text(tr('send_another'),
+                  style: const TextStyle(color: Colors.white, fontSize: 12,
                       fontWeight: FontWeight.w700)),
             ]),
           ),
@@ -433,11 +441,11 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
   );
 
   String _ratingLabel(int r) => switch (r) {
-    1 => 'سيء جداً',
-    2 => 'سيء',
-    3 => 'مقبول',
-    4 => 'جيد',
-    _ => 'ممتاز 🎉',
+    1 => tr('rate_very_bad'),
+    2 => tr('rate_bad'),
+    3 => tr('rate_ok'),
+    4 => tr('rate_good'),
+    _ => tr('rate_excellent'),
   };
 
   Color _ratingColor(int r) => switch (r) {
@@ -452,6 +460,24 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
 // ════════════════════════════════════════════
 class _AllFeedbackTab extends StatelessWidget {
   const _AllFeedbackTab();
+
+  String _categoryLabel(String key) {
+    switch (key) {
+      case 'general':    return tr('cat_general');
+      case 'booking':    return tr('cat_booking');
+      case 'price':      return tr('cat_price');
+      case 'app':        return tr('cat_app');
+      case 'support':    return tr('cat_support');
+      case 'suggestion': return tr('cat_suggestion');
+      case 'عام':           return tr('cat_general');
+      case 'تجربة الحجز':   return tr('cat_booking');
+      case 'السعر':         return tr('cat_price');
+      case 'التطبيق':       return tr('cat_app');
+      case 'خدمة العملاء':  return tr('cat_support');
+      case 'اقتراح':        return tr('cat_suggestion');
+      default: return key;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,8 +499,8 @@ class _AllFeedbackTab extends StatelessWidget {
               Icon(FontAwesomeIcons.commentSlash, size: 36,
                   color: C.muted.withOpacity(0.3)),
               const SizedBox(height: 12),
-              const Text("لا توجد تقييمات بعد",
-                  style: TextStyle(color: C.muted, fontSize: 14)),
+              Text(tr('no_feedback_yet'),
+                  style: const TextStyle(color: C.muted, fontSize: 14)),
             ]),
           );
         }
@@ -508,11 +534,11 @@ class _AllFeedbackTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _stat(count.toString(), "تقييم", FontAwesomeIcons.commentDots, C.accent),
+        _stat(count.toString(), tr('rating_count'), FontAwesomeIcons.commentDots, C.accent),
         Container(width: 1, height: 36, color: Colors.white24),
-        _stat(avg.toStringAsFixed(1), "المتوسط", FontAwesomeIcons.star, C.warning),
+        _stat(avg.toStringAsFixed(1), tr('average'), FontAwesomeIcons.star, C.warning),
         Container(width: 1, height: 36, color: Colors.white24),
-        _stat("${(avg / 5 * 100).toInt()}%", "الرضا",
+        _stat("${(avg / 5 * 100).toInt()}%", tr('satisfaction'),
             FontAwesomeIcons.faceSmile, C.success),
       ]),
     );
@@ -530,7 +556,7 @@ class _AllFeedbackTab extends StatelessWidget {
   Widget _buildCard(DocumentSnapshot doc) {
     final d       = doc.data() as Map<String, dynamic>;
     final rating  = (d['rating']   as int?)    ?? 0;
-    final cat     = (d['category'] as String?) ?? 'عام';
+    final cat     = (d['category'] as String?) ?? 'general';
     final message = (d['message']  as String?) ?? '';
     final ts      = d['createdAt'] as Timestamp?;
     final dateStr = ts != null ? _fmt(ts.toDate()) : '—';
@@ -559,7 +585,7 @@ class _AllFeedbackTab extends StatelessWidget {
                 color: rColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(cat, style: TextStyle(fontSize: 10,
+              child: Text(_categoryLabel(cat), style: TextStyle(fontSize: 10,
                   fontWeight: FontWeight.w700, color: rColor)),
             ),
           ]),
@@ -567,7 +593,7 @@ class _AllFeedbackTab extends StatelessWidget {
         const SizedBox(height: 8),
         const Divider(height: 1),
         const SizedBox(height: 8),
-        Text(message, textAlign: TextAlign.right,
+        Text(message, textAlign: TextAlign.start,
             style: const TextStyle(fontSize: 12, color: C.dark, height: 1.55)),
       ]),
     );
@@ -575,9 +601,9 @@ class _AllFeedbackTab extends StatelessWidget {
 
   String _fmt(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
-    if (diff.inHours   < 24) return 'منذ ${diff.inHours} ساعة';
-    if (diff.inDays    <  7) return 'منذ ${diff.inDays} يوم';
+    if (diff.inMinutes < 60) return tr('time_minutes_ago').replaceAll('{n}', '${diff.inMinutes}');
+    if (diff.inHours   < 24) return tr('time_hours_ago').replaceAll('{n}', '${diff.inHours}');
+    if (diff.inDays    <  7) return tr('time_days_ago').replaceAll('{n}', '${diff.inDays}');
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
