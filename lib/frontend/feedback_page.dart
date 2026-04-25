@@ -295,8 +295,6 @@ class _QuickFeedbackFormState extends State<QuickFeedbackForm> {
             controller: _msgCtrl,
             maxLines: 4,
             maxLength: 500,
-            textAlign: TextAlign.right,
-            textDirection: TextDirection.rtl,
             style: const TextStyle(fontSize: 13, color: C.dark),
             decoration: InputDecoration(
               hintText: "اكتب ملاحظاتك هنا...",

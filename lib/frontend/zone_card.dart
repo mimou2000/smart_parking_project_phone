@@ -7,6 +7,7 @@ import 'booking_page.dart';
 import 'navigation_page.dart';
 import 'parking_zone.dart';
 import 'spot_type_helpers.dart';
+import '../backend/app_locale.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  بطاقة المنطقة (Zone Card) + chip مساعد
@@ -51,7 +52,141 @@ class ZoneCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final sel = isSelected;
     final dLabel = dijkstraLabel;
+    final bool isRtl = AppLocale.current.languageCode == 'ar';   // ⬅️ تحديد الاتجاه
 
+    // ── بناء أجزاء البطاقة ──
+    final Widget actionButtons = Column(
+      children: [
+        GestureDetector(
+          onTap: zone.isAvailable
+              ? () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BookingPage(zone: zone)))
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: zone.isAvailable
+                  ? const LinearGradient(colors: [C.primary, C.secondary])
+                  : null,
+              color: zone.isAvailable ? null : C.border,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              zone.isAvailable ? "احجز" : "ممتلئ",
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: zone.isAvailable ? C.white : C.muted),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _openNavigation(context),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: C.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(FontAwesomeIcons.directions,
+                size: 16, color: C.primary),
+          ),
+        ),
+      ],
+    );
+
+    final Widget detailsColumn = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,   // دائمًا للنهاية، صحيح لـRTL
+        children: [
+          Text(zone.name,
+              textAlign: TextAlign.start,
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
+          const SizedBox(height: 3),
+          Text(zone.address,
+              textAlign: TextAlign.start,
+              style: const TextStyle(fontSize: 11, color: C.muted)),
+          const SizedBox(height: 6),
+          if (zone.spotTypes.isNotEmpty)
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 6,
+              runSpacing: 4,
+              children: zone.spotTypes.entries.map((entry) {
+                final letter = getSpotTypeLetter(entry.key);
+                final count = entry.value;
+                final color = getSpotTypeColor(entry.key);
+                return Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(getSpotTypeIcon(entry.key), size: 9, color: color),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$letter ×$count',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: color),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 6),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              _chip2(
+                zone.isAvailable
+                    ? "${zone.availableSpots}/${zone.totalSpots}"
+                    : "ممتلئ",
+                FontAwesomeIcons.squareParking,
+                zone.isAvailable ? C.success : C.error,
+              ),
+              _chip2("${zone.pricePerHour.toInt()} دج/س",
+                  FontAwesomeIcons.tag, C.warning),
+              if (dLabel != null && sortBy == 'dijkstra')
+                _chip2(dLabel, FontAwesomeIcons.networkWired, C.primary)
+              else
+                _chip2("${zone.distance} كم", FontAwesomeIcons.route, C.accent),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final Widget parkingIcon = Container(
+      width: 42,
+      height: 42,
+      margin: const EdgeInsetsDirectional.only(end: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: zone.isAvailable
+              ? [C.success, const Color(0xFF059669)]
+              : [C.error, const Color(0xFFDC2626)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(FontAwesomeIcons.squareParking,
+          color: Colors.white, size: 18),
+    );
+
+    // ═════════════════════════════════════════════════════════════════
+    //  التجميع النهائي مع الانعكاس حسب اللغة
+    // ═════════════════════════════════════════════════════════════════
     return GestureDetector(
       onTap: () {
         onSelect(zone);
@@ -75,146 +210,24 @@ class ZoneCard extends StatelessWidget {
             )
           ],
         ),
-        child: Row(children: [
-          // أزرار الحجز والاتجاهات
-          Column(
-            children: [
-              GestureDetector(
-                onTap: zone.isAvailable
-                    ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => BookingPage(zone: zone)))
-                    : null,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: zone.isAvailable
-                        ? const LinearGradient(
-                            colors: [C.primary, C.secondary])
-                        : null,
-                    color: zone.isAvailable ? null : C.border,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    zone.isAvailable ? "احجز" : "ممتلئ",
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: zone.isAvailable ? C.white : C.muted),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => _openNavigation(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: C.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(FontAwesomeIcons.directions,
-                      size: 16, color: C.primary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(zone.name,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: C.dark)),
-                const SizedBox(height: 3),
-                Text(zone.address,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontSize: 11, color: C.muted)),
-                const SizedBox(height: 6),
-                // أنواع المواقف
-                if (zone.spotTypes.isNotEmpty)
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: zone.spotTypes.entries.map((entry) {
-                      final letter = getSpotTypeLetter(entry.key);
-                      final count = entry.value;
-                      final color = getSpotTypeColor(entry.key);
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(getSpotTypeIcon(entry.key),
-                                size: 9, color: color),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$letter ×$count',
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: color),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                const SizedBox(height: 6),
-                // معلومات إضافية
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    _chip2(
-                      zone.isAvailable
-                          ? "${zone.availableSpots}/${zone.totalSpots}"
-                          : "ممتلئ",
-                      FontAwesomeIcons.squareParking,
-                      zone.isAvailable ? C.success : C.error,
-                    ),
-                    _chip2("${zone.pricePerHour.toInt()} دج/س",
-                        FontAwesomeIcons.tag, C.warning),
-                    if (dLabel != null && sortBy == 'dijkstra')
-                      _chip2(dLabel, FontAwesomeIcons.networkWired, C.primary)
-                    else
-                      _chip2("${zone.distance} كم",
-                          FontAwesomeIcons.route, C.accent),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // أيقونة الموقف
-          Container(
-            width: 42,
-            height: 42,
-            margin: const EdgeInsets.only(right: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: zone.isAvailable
-                    ? [C.success, const Color(0xFF059669)]
-                    : [C.error, const Color(0xFFDC2626)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(FontAwesomeIcons.squareParking,
-                color: Colors.white, size: 18),
-          ),
-        ]),
+        child: Row(
+          textDirection: Directionality.of(context),   // ⬅️ يفرض اتجاه السياق
+          children: isRtl
+              ? [
+            parkingIcon,
+            const SizedBox(width: 10),
+            detailsColumn,
+            const SizedBox(width: 10),
+            actionButtons,
+          ]
+              : [
+            actionButtons,
+            const SizedBox(width: 10),
+            detailsColumn,
+            const SizedBox(width: 10),
+            parkingIcon,
+          ],
+        ),
       ),
     );
   }

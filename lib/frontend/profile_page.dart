@@ -3,8 +3,11 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import 'login_page.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 import 'bookings_page.dart';
 import 'feedback_page.dart';
+import 'settings_page.dart';
+import 'security_page.dart';
 
 // ════════════════════════════════════════════
 //  صفحة الحساب الشخصي — Firestore
@@ -14,6 +17,13 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: C.light,
       body: StreamBuilder<Map<String, dynamic>?>(
@@ -54,6 +64,9 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ════════════════════════════════════════════
+  //  Header – صورة و اسم و بريد
+  // ════════════════════════════════════════════
   Widget _buildHeader(BuildContext context, String name, String email) {
     return Container(
       width: double.infinity,
@@ -73,13 +86,19 @@ class ProfilePage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(FontAwesomeIcons.gear, color: Colors.white, size: 14),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsPage()),
+                    ),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(FontAwesomeIcons.gear, color: Colors.white, size: 14),
+                    ),
                   ),
-                  const Text("حسابي",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                  Text(tr('profile_title'),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(width: 36),
                 ],
               ),
@@ -127,6 +146,9 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ════════════════════════════════════════════
+  //  بطاقة المركبة
+  // ════════════════════════════════════════════
   Widget _buildCarCard(String plate, String carType, String carModel, VehicleType vehicleType) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -161,13 +183,9 @@ class ProfilePage extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(vehicleType.label,
-                            style: TextStyle(
-                                color: _vehicleTypeColor(vehicleType),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700)),
+                            style: TextStyle(color: _vehicleTypeColor(vehicleType), fontSize: 10, fontWeight: FontWeight.w700)),
                         const SizedBox(width: 4),
-                        Icon(_vehicleTypeIcon(vehicleType),
-                            size: 10, color: _vehicleTypeColor(vehicleType)),
+                        Icon(_vehicleTypeIcon(vehicleType), size: 10, color: _vehicleTypeColor(vehicleType)),
                       ],
                     ),
                   ),
@@ -226,49 +244,59 @@ class ProfilePage extends StatelessWidget {
     ]);
   }
 
+  // ════════════════════════════════════════════
+  //  قائمة الخيارات (معدلة بمفتاح ثابت + دعم RTL)
+  // ════════════════════════════════════════════
   Widget _buildMenuSection(BuildContext ctx, String name, String email, String plate, String carType, String carModel, VehicleType vehicleType) {
     return Container(
+      key: const ValueKey('profile_menu'),   // يمنع التكرار
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       decoration: BoxDecoration(
         color: C.white, borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: Column(children: [
-        _menuItem(FontAwesomeIcons.userPen, "تعديل الملف الشخصي", C.primary, () => _editProfileDialog(ctx, name, email)),
+        _menuItem(FontAwesomeIcons.userPen, tr('edit'), C.primary, () => _editProfileDialog(ctx, name, email)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.car, "تعديل بيانات المركبة", C.accent, () => _editCarDialog(ctx, plate, carType, vehicleType)),
+        _menuItem(FontAwesomeIcons.car, tr('register_plate'), C.accent, () => _editCarDialog(ctx, plate, carType, vehicleType)),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.star,         "التقييمات",           C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
+        _menuItem(FontAwesomeIcons.star,         tr('profile_ratings'),    C.warning,  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const FeedbackPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.bell,         "الإشعارات",           const Color(0xFFF97316),  () {}),
+        _menuItem(FontAwesomeIcons.gear,         tr('profile_settings'),   const Color(0xFFF97316),  () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SettingsPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.shieldHalved, "الأمان وكلمة المرور", C.secondary, () {}),
+        _menuItem(FontAwesomeIcons.shieldHalved, tr('profile_security'),   C.secondary, () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const SecurityPage()))),
         _menuDivider(),
-        _menuItem(FontAwesomeIcons.circleQuestion, "المساعدة والدعم",   C.muted,    () {}),
+        _menuItem(FontAwesomeIcons.circleQuestion, tr('profile_help'),     C.muted,    () => _showHelpDialog(ctx)),
       ]),
     );
   }
 
   Widget _menuItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    final bool isRtl = AppLocale.current.languageCode == 'ar';
+    final Widget chevron = Icon(
+      isRtl ? FontAwesomeIcons.angleLeft : FontAwesomeIcons.angleRight,
+      size: 12,
+      color: C.muted,
+    );
+    final Widget leading = Row(children: [
+      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+      const SizedBox(width: 12),
+      Container(
+        width: 34, height: 34,
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 14, color: color),
+      ),
+    ]);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
+          textDirection: AppLocale.textDirection,   // ✅ تم التصحيح هنا
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Icon(FontAwesomeIcons.angleLeft, size: 12, color: C.muted),
-            Row(children: [
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
-              const SizedBox(width: 12),
-              Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 14, color: color),
-              ),
-            ]),
-          ],
+          children: isRtl ? [chevron, leading] : [leading, chevron],
         ),
       ),
     );
@@ -276,16 +304,37 @@ class ProfilePage extends StatelessWidget {
 
   Widget _menuDivider() => const Divider(height: 1, indent: 16, endIndent: 16);
 
+  void _showHelpDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(tr('help_title'),
+            style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: Text(
+          tr('help_body'),
+          style: const TextStyle(fontFamily: 'Tajawal', height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: Text(tr('ok'), style: const TextStyle(fontFamily: 'Tajawal')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _editProfileDialog(BuildContext ctx, String name, String email) async {
     final nameCtrl = TextEditingController(text: name);
     await showDialog(
       context: ctx,
       builder: (dCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تعديل الملف الشخصي', textAlign: TextAlign.right,
+        title: const Text('تعديل الملف الشخصي', textAlign: TextAlign.start,
             style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
         content: TextField(
-          controller: nameCtrl, textAlign: TextAlign.right,
+          controller: nameCtrl, textAlign: TextAlign.start,
           decoration: const InputDecoration(labelText: 'الاسم'),
         ),
         actions: [
@@ -312,7 +361,7 @@ class ProfilePage extends StatelessWidget {
       builder: (dCtx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('تعديل بيانات المركبة', textAlign: TextAlign.right,
+          title: const Text('تعديل بيانات المركبة', textAlign: TextAlign.start,
               style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
           content: SingleChildScrollView(
             child: Column(
@@ -320,7 +369,7 @@ class ProfilePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 TextField(
-                  controller: plateCtrl, textAlign: TextAlign.right,
+                  controller: plateCtrl, textAlign: TextAlign.start,
                   decoration: const InputDecoration(labelText: 'رقم اللوحة'),
                 ),
                 const SizedBox(height: 16),
@@ -423,11 +472,11 @@ class ProfilePage extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: C.error.withOpacity(0.3)),
           ),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(FontAwesomeIcons.rightFromBracket, size: 14, color: C.error),
-            SizedBox(width: 8),
-            Text("تسجيل الخروج",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: C.error)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(FontAwesomeIcons.rightFromBracket, size: 14, color: C.error),
+            const SizedBox(width: 8),
+            Text(tr('profile_logout'),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: C.error)),
           ]),
         ),
       ),

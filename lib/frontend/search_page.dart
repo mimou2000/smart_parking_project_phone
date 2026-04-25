@@ -139,9 +139,9 @@ class _SearchPageState extends State<SearchPage> {
         // مقارنة الحالة بشكل غير حساس لحالة الأحرف
         final explicitAvailable = allSpots
             .where((d) {
-              final s = (d.data()['status'] as String? ?? '').toUpperCase();
-              return s == 'AVAILABLE';
-            })
+          final s = (d.data()['status'] as String? ?? '').toUpperCase();
+          return s == 'AVAILABLE';
+        })
             .length;
 
         int availableCount;
@@ -188,7 +188,7 @@ class _SearchPageState extends State<SearchPage> {
           _dijkstraResults[i].zone.id: i
       };
       list.sort(
-          (a, b) => (order[a.id] ?? 999).compareTo(order[b.id] ?? 999));
+              (a, b) => (order[a.id] ?? 999).compareTo(order[b.id] ?? 999));
     } else if (_sortBy == 'price') {
       list.sort((a, b) => a.pricePerHour.compareTo(b.pricePerHour));
     } else if (_sortBy == 'spots') {
@@ -288,25 +288,25 @@ class _SearchPageState extends State<SearchPage> {
                     borderRadius: BorderRadius.circular(10),
                     border: _userLat != null
                         ? Border.all(
-                            color: C.success.withOpacity(0.6), width: 1.5)
+                        color: C.success.withOpacity(0.6), width: 1.5)
                         : null,
                   ),
                   child: _locating
                       ? const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation(Colors.white)))
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                          AlwaysStoppedAnimation(Colors.white)))
                       : Icon(
-                          _userLat != null
-                              ? FontAwesomeIcons.locationDot
-                              : FontAwesomeIcons.locationCrosshairs,
-                          color: _userLat != null
-                              ? C.success
-                              : Colors.white,
-                          size: 15,
-                        ),
+                    _userLat != null
+                        ? FontAwesomeIcons.locationDot
+                        : FontAwesomeIcons.locationCrosshairs,
+                    color: _userLat != null
+                        ? C.success
+                        : Colors.white,
+                    size: 15,
+                  ),
                 ),
               ),
             ],
@@ -331,20 +331,20 @@ class _SearchPageState extends State<SearchPage> {
         decoration: InputDecoration(
           hintText: "ابحث عن موقف أو عنوان...",
           hintStyle:
-              const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+          const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           filled: true,
           fillColor: C.white,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           prefixIcon: const Icon(FontAwesomeIcons.magnifyingGlass,
               size: 14, color: C.muted),
           suffixIcon: _searchCtrl.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, size: 16, color: C.muted),
-                  onPressed: () {
-                    _searchCtrl.clear();
-                    setState(() {});
-                  })
+              icon: const Icon(Icons.close, size: 16, color: C.muted),
+              onPressed: () {
+                _searchCtrl.clear();
+                setState(() {});
+              })
               : null,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -363,33 +363,17 @@ class _SearchPageState extends State<SearchPage> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Row(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              reverse: true,
-              child: Row(children: [
-                _chip("ذكي ⬡", 'dijkstra', FontAwesomeIcons.networkWired),
-                const SizedBox(width: 6),
-                _chip("الأقرب", 'distance', FontAwesomeIcons.route),
-                const SizedBox(width: 6),
-                _chip("الأرخص", 'price', FontAwesomeIcons.tag),
-                const SizedBox(width: 6),
-                _chip("الأكثر", 'spots', FontAwesomeIcons.squareParking),
-              ]),
-            ),
-          ),
-          const SizedBox(width: 10),
           GestureDetector(
             onTap: () =>
                 setState(() => _showAvailableOnly = !_showAvailableOnly),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 gradient: _showAvailableOnly
                     ? const LinearGradient(
-                        colors: [C.success, Color(0xFF059669)])
+                    colors: [C.success, Color(0xFF059669)])
                     : null,
                 color: _showAvailableOnly ? null : C.light,
                 borderRadius: BorderRadius.circular(8),
@@ -409,6 +393,21 @@ class _SearchPageState extends State<SearchPage> {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: _showAvailableOnly ? C.white : C.muted)),
+              ]),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _chip("ذكي ⬡", 'dijkstra', FontAwesomeIcons.networkWired),
+                const SizedBox(width: 6),
+                _chip("الأقرب", 'distance', FontAwesomeIcons.route),
+                const SizedBox(width: 6),
+                _chip("الأرخص", 'price', FontAwesomeIcons.tag),
+                const SizedBox(width: 6),
+                _chip("الأكثر", 'spots', FontAwesomeIcons.squareParking),
               ]),
             ),
           ),
@@ -453,8 +452,8 @@ class _SearchPageState extends State<SearchPage> {
     final center = _userLat != null
         ? LatLng(_userLat!, _userLng!)
         : (zones.isNotEmpty
-            ? LatLng(zones[0].lat, zones[0].lng)
-            : const LatLng(36.1901, 5.4108));
+        ? LatLng(zones[0].lat, zones[0].lng)
+        : const LatLng(36.1901, 5.4108));
 
     return FlutterMap(
       mapController: _mapController,
@@ -491,8 +490,8 @@ class _SearchPageState extends State<SearchPage> {
                     gradient: LinearGradient(
                       colors: zone.isAvailable
                           ? (sel
-                              ? [C.primary, C.secondary]
-                              : [C.success, const Color(0xFF059669)])
+                          ? [C.primary, C.secondary]
+                          : [C.success, const Color(0xFF059669)])
                           : [C.error, const Color(0xFFDC2626)],
                     ),
                     borderRadius: BorderRadius.circular(18),
@@ -559,6 +558,37 @@ class _SearchPageState extends State<SearchPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // يمين في RTL: العنوان + Dijkstra badge
+              Row(children: [
+                const Text("المواقف القريبة",
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: C.dark)),
+                if (_sortBy == 'dijkstra' && _userLat != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [C.primary, C.secondary]),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(children: [
+                      Icon(FontAwesomeIcons.networkWired,
+                          size: 9, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text("Dijkstra",
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ],
+              ]),
+              // يسار في RTL: عداد النتائج
               Text.rich(
                 TextSpan(
                   children: [
@@ -583,34 +613,6 @@ class _SearchPageState extends State<SearchPage> {
                 ),
                 style: const TextStyle(fontSize: 12),
               ),
-              Row(children: [
-                if (_sortBy == 'dijkstra' && _userLat != null)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [C.primary, C.secondary]),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Row(children: [
-                      Icon(FontAwesomeIcons.networkWired,
-                          size: 9, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text("Dijkstra",
-                          style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
-                const Text("المواقف القريبة",
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: C.dark)),
-              ]),
             ],
           ),
         ),
@@ -638,6 +640,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  //  Quick Feedback Sheet
+// ──────────────────────────────────────────────────────────────────────────
+//  Quick Feedback Sheet
 }

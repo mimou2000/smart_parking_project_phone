@@ -4,10 +4,8 @@ import 'main.dart';
 import 'search_page.dart';
 import 'bookings_page.dart';
 import 'profile_page.dart';
+import '../backend/app_locale.dart';
 
-// ════════════════════════════════════════════
-//  HomeShell — 3 تبويبات (البحث | حجوزاتي | حسابي)
-// ════════════════════════════════════════════
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
   @override
@@ -25,13 +23,26 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _buildBottomNav(),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) {
+        return Scaffold(
+          body: IndexedStack(index: _currentIndex, children: _pages),
+          bottomNavigationBar: _buildBottomNav(),
+        );
+      },
     );
   }
 
   Widget _buildBottomNav() {
+    final bool isRtl = AppLocale.current.languageCode == 'ar';
+
+    final List<Widget> navItems = [
+      _navItem(index: 0, icon: FontAwesomeIcons.mapLocationDot, label: tr('nav_search')),
+      _navItem(index: 1, icon: FontAwesomeIcons.rectangleList,   label: tr('nav_bookings')),
+      _navItem(index: 2, icon: FontAwesomeIcons.circleUser,      label: tr('nav_profile')),
+    ];
+
     return Container(
       decoration: BoxDecoration(
         color: C.white,
@@ -46,12 +57,9 @@ class _HomeShellState extends State<HomeShell> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(
+            textDirection: Directionality.of(context),
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(index: 0, icon: FontAwesomeIcons.mapLocationDot, label: "البحث"),
-              _navItem(index: 1, icon: FontAwesomeIcons.rectangleList,   label: "حجوزاتي"),
-              _navItem(index: 2, icon: FontAwesomeIcons.circleUser,      label: "حسابي"),
-            ],
+            children: isRtl ? navItems.reversed.toList() : navItems,
           ),
         ),
       ),
@@ -77,15 +85,18 @@ class _HomeShellState extends State<HomeShell> {
               : null,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(children: [
-          Icon(icon, size: 16, color: sel ? C.white : C.muted),
-          if (sel) ...[
-            const SizedBox(width: 7),
-            Text(label,
-                style: const TextStyle(
-                    color: C.white, fontSize: 12, fontWeight: FontWeight.w700)),
+        child: Row(
+          textDirection: Directionality.of(context),   // هام للأيقونة والنص داخل التبويب
+          children: [
+            Icon(icon, size: 16, color: sel ? C.white : C.muted),
+            if (sel) ...[
+              const SizedBox(width: 7),
+              Text(label,
+                  style: const TextStyle(
+                      color: C.white, fontSize: 12, fontWeight: FontWeight.w700)),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }

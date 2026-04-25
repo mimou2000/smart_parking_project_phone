@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 import 'navigation_page.dart';
 import 'parking_zone.dart';
 
@@ -33,6 +34,13 @@ class _BookingsPageState extends State<BookingsPage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: C.light,
       body: StreamBuilder<List<BookingRecord>>(
@@ -40,6 +48,7 @@ class _BookingsPageState extends State<BookingsPage>
         builder: (context, snap) {
           final all = snap.data ?? [];
           final isLoading = snap.connectionState == ConnectionState.waiting;
+          final hasError = snap.hasError;
 
           return Column(
             children: [
@@ -48,14 +57,38 @@ class _BookingsPageState extends State<BookingsPage>
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator(color: C.primary))
-                    : TabBarView(
-                  controller: _tab,
-                  children: [
-                    _buildList(all, 'active'),
-                    _buildList(all, 'completed'),
-                    _buildList(all, 'cancelled'),
-                  ],
-                ),
+                    : hasError
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(FontAwesomeIcons.triangleExclamation,
+                                      size: 36, color: C.error),
+                                  const SizedBox(height: 12),
+                                  Text(tr('bookings_error'),
+                                      style: const TextStyle(
+                                          color: C.dark,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14)),
+                                  const SizedBox(height: 6),
+                                  Text('${snap.error}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: C.muted, fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tab,
+                            children: [
+                              _buildList(all, 'active'),
+                              _buildList(all, 'completed'),
+                              _buildList(all, 'cancelled'),
+                            ],
+                          ),
               ),
             ],
           );
@@ -84,18 +117,19 @@ class _BookingsPageState extends State<BookingsPage>
                   child: Row(children: [
                     const Icon(FontAwesomeIcons.circleCheck, color: C.success, size: 11),
                     const SizedBox(width: 5),
-                    Text("$activeCount نشط", style: const TextStyle(color: C.success, fontSize: 11, fontWeight: FontWeight.w700)),
+                    Text("$activeCount ${tr('bookings_active')}",
+                        style: const TextStyle(color: C.success, fontSize: 11, fontWeight: FontWeight.w700)),
                   ]),
                 )
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-                  child: Text("${all.length} حجز",
+                  child: Text("${all.length} ${tr('bookings_count')}",
                       style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                 ),
-              const Text("حجوزاتي",
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+              Text(tr('bookings_title'),
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
             ],
           ),
         ),
@@ -113,7 +147,11 @@ class _BookingsPageState extends State<BookingsPage>
         indicatorColor: C.primary,
         indicatorWeight: 2.5,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'Tajawal'),
-        tabs: const [Tab(text: "النشطة"), Tab(text: "المكتملة"), Tab(text: "الملغاة")],
+        tabs: [
+          Tab(text: tr('bookings_active')),
+          Tab(text: tr('bookings_completed')),
+          Tab(text: tr('bookings_cancelled')),
+        ],
       ),
     );
   }
@@ -127,7 +165,7 @@ class _BookingsPageState extends State<BookingsPage>
           children: [
             Icon(FontAwesomeIcons.rectangleList, size: 36, color: C.muted.withOpacity(0.3)),
             const SizedBox(height: 12),
-            const Text("لا توجد حجوزات", style: TextStyle(color: C.muted, fontSize: 14)),
+            Text(tr('bookings_empty'), style: const TextStyle(color: C.muted, fontSize: 14)),
           ],
         ),
       );
@@ -281,10 +319,10 @@ if (b.status == 'active') ...[
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد الإلغاء', textAlign: TextAlign.right,
+        title: const Text('تأكيد الإلغاء', textAlign: TextAlign.start,
             style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
         content: const Text('هل أنت متأكد من إلغاء هذا الحجز؟ سيتم استرداد الموقف.',
-            textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Tajawal')),
+            textAlign: TextAlign.start, style: TextStyle(fontFamily: 'Tajawal')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')),
           ElevatedButton(

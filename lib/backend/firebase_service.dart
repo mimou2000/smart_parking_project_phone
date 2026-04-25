@@ -148,6 +148,8 @@ class BookingRecord {
   final double zoneLng;
   final double spotLat;
   final double spotLng;
+  // ── بيانات صاحب الحجز ──
+  final String userName;
 
   BookingRecord({
     required this.id,
@@ -165,6 +167,7 @@ class BookingRecord {
     this.zoneLng = 0,
     this.spotLat = 0,
     this.spotLng = 0,
+    this.userName = '',
   });
 
   // دوال مساعدة للعرض في BookingsPage
@@ -195,9 +198,31 @@ class FirebaseService {
   static String? get uid => _auth.currentUser?.uid;
   static User? get currentUser => _auth.currentUser;
 
+  /// تدفق حالة تسجيل الدخول — يُستخدم للحفاظ على الجلسة عند إعادة فتح التطبيق
+  static Stream<User?> authStateChanges() => _auth.authStateChanges();
+
   // ── دوال المصادقة ──
+  // ملاحظة: على تطبيقات الجوال Firebase Auth يحافظ على الجلسة تلقائياً
+  // بحيث ي��قى المستخدم مسجّلاً حتى بعد إغلاق التطبيق.
   static Future<UserCredential> signIn(String email, String password) async {
     return await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  /// تغيير كلمة المرور — يتطلب إعادة مصادقة بالبريد وكلمة المرور الحالية
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw Exception('لم يتم تسجيل الدخول');
+    }
+    final cred = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPassword);
   }
 
   static Future<void> register({
@@ -306,6 +331,22 @@ class FirebaseService {
   }) async {
     if (uid == null) throw Exception("يجب تسجيل الدخول أولاً");
 
+    // ── جلب اسم المستخدم من ملف الحساب لتخزينه مع الحجز ──
+    String userName = '';
+    String userEmail = currentUser?.email ?? '';
+    String userPlate = '';
+    try {
+      final userDoc = await _db.collection('users').doc(uid).get();
+      final userData = userDoc.data();
+      if (userData != null) {
+        userName = (userData['name'] as String?)?.trim() ?? '';
+        userPlate = (userData['plate'] as String?) ?? '';
+      }
+    } catch (_) {}
+    if (userName.isEmpty) {
+      userName = currentUser?.displayName ?? userEmail.split('@').first;
+    }
+
     final batch = _db.batch();
     final bookingRef = _db.collection('reservations').doc();
     final spotRef = _db
@@ -316,6 +357,9 @@ class FirebaseService {
 
     batch.set(bookingRef, {
       'user_id':        uid,
+      'user_name':      userName,
+      'user_email':     userEmail,
+      'user_plate':     userPlate,
       'zone_id':        zoneId,
       'zone_name':      zoneName,
       'address':        address,
@@ -348,33 +392,41 @@ class FirebaseService {
   }
 
   // ── حجوزاتي ──
+  // ملاحظة: نتجنّب orderBy على جانب الخادم لأنه يستلزم فهرس مركّب
+  // (user_id + created_at). عوضاً عن ذلك نُرتّب النتائج محلّياً.
   static Stream<List<BookingRecord>> myBookingsStream() {
     if (uid == null) return Stream.value([]);
 
     return _db.collection('reservations')
         .where('user_id', isEqualTo: uid)
-        .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) {
-      final d = doc.data();
-      return BookingRecord(
-        id: doc.id,
-        zoneId: d['zone_id'] ?? '',
-        zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
-        address: d['address'] ?? '',
-        spotId: d['spot_id'] ?? '',
-        spotName: d['spot_number'] ?? 'موقف',
-        startTime: (d['start_time'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        quantity: (d['duration'] ?? 0) as int,
-        totalPrice: _toDouble(d['total_price']),  // ✅ إصلاح
-        status: d['status'] ?? 'active',
-        type: d['rate_type'] ?? 'hourly',
-        zoneLat: _toDouble(d['zone_lat']),  // ✅ إصلاح
-        zoneLng: _toDouble(d['zone_lng']),  // ✅ إصلاح
-        spotLat: _toDouble(d['spot_lat']),  // ✅ إصلاح
-        spotLng: _toDouble(d['spot_lng']),  // ✅ إصلاح
-      );
-    }).toList());
+        .map((snap) {
+      final list = snap.docs.map((doc) {
+        final d = doc.data();
+        return BookingRecord(
+          id: doc.id,
+          zoneId: d['zone_id'] ?? '',
+          zoneName: d['zone_name'] ?? 'منطقة غير معروفة',
+          address: d['address'] ?? '',
+          spotId: d['spot_id'] ?? '',
+          spotName: d['spot_number'] ?? 'موقف',
+          startTime: (d['start_time'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          quantity: (d['duration'] ?? 0) as int,
+          totalPrice: _toDouble(d['total_price']),
+          status: d['status'] ?? 'active',
+          type: d['rate_type'] ?? 'hourly',
+          zoneLat: _toDouble(d['zone_lat']),
+          zoneLng: _toDouble(d['zone_lng']),
+          spotLat: _toDouble(d['spot_lat']),
+          spotLng: _toDouble(d['spot_lng']),
+          userName: (d['user_name'] as String?) ?? '',
+        );
+      }).toList();
+
+      // ترتيب محلي بحسب تاريخ الإنشاء (الأحدث أولاً) ثم البدء كاحتياطي
+      list.sort((a, b) => b.startTime.compareTo(a.startTime));
+      return list;
+    });
   }
 
   // ── إلغاء حجز ──
