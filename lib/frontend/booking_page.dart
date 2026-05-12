@@ -4,6 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'main.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
+import '../backend/guest_service.dart';
 import 'home_shell.dart';
 import 'feedback_page.dart';
 import 'navigation_page.dart';
@@ -49,6 +51,8 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Future<void> _loadUserVehicleType() async {
+    // وضع الضيف: استخدم النوع الافتراضي بدون Firebase
+    if (GuestService.isGuest) return;
     final vehicleType = await FirebaseService.getUserVehicleType();
     if (mounted) {
       setState(() => _userVehicleType = vehicleType);
@@ -75,6 +79,13 @@ class _BookingPageState extends State<BookingPage>
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: C.light,
       body: FadeTransition(
@@ -162,12 +173,12 @@ class _BookingPageState extends State<BookingPage>
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                     color: C.accent, borderRadius: BorderRadius.circular(10)),
-                child: const Row(children: [
-                  Icon(FontAwesomeIcons.diamondTurnRight,
+                child: Row(children: [
+                  const Icon(FontAwesomeIcons.diamondTurnRight,
                       color: Colors.white, size: 12),
-                  SizedBox(width: 5),
-                  Text("الاتجاه",
-                      style: TextStyle(
+                  const SizedBox(width: 5),
+                  Text(tr('direction'),
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700)),
@@ -225,7 +236,7 @@ class _BookingPageState extends State<BookingPage>
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: QuickFeedbackForm(
-                prefillCategory: 'تجربة الحجز',
+                prefillCategory: 'booking',
                 onSubmitted: () {
                   setState(() => _showFeedback = false);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -233,8 +244,8 @@ class _BookingPageState extends State<BookingPage>
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
-                    content: const Text("شكراً على تقييمك!",
-                        style: TextStyle(
+                    content: Text(tr('thanks_rating'),
+                        style: const TextStyle(
                             fontFamily: 'Tajawal',
                             fontWeight: FontWeight.w700)),
                   ));
@@ -266,8 +277,8 @@ class _BookingPageState extends State<BookingPage>
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text("الإحداثيات",
-                style: TextStyle(fontSize: 10, color: C.muted)),
+            Text(tr('coordinates'),
+                style: const TextStyle(fontSize: 10, color: C.muted)),
             Text(
               "${widget.zone.lat.toStringAsFixed(4)}, "
                   "${widget.zone.lng.toStringAsFixed(4)}",
@@ -295,12 +306,12 @@ class _BookingPageState extends State<BookingPage>
         Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           _stat(
               "${widget.zone.availableSpots}/${widget.zone.totalSpots}",
-              "مواقف متاحة",
+              tr('available_spots_label'),
               FontAwesomeIcons.squareParking,
               C.success),
-          _stat("${widget.zone.pricePerHour.toInt()} دج", "السعر/ساعة",
+          _stat("${widget.zone.pricePerHour.toInt()} ${tr('currency')}", tr('price_per_hour_label'),
               FontAwesomeIcons.tag, C.warning),
-          _stat("${widget.zone.distance} كم", "المسافة",
+          _stat("${widget.zone.distance} ${tr('distance_short')}", tr('distance_label'),
               FontAwesomeIcons.route, C.accent),
         ]),
       ]),
@@ -366,7 +377,7 @@ class _BookingPageState extends State<BookingPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _filterByVehicleType ? "مناسب لمركبتي" : "الكل",
+                      _filterByVehicleType ? tr('suitable_only') : tr('all_spots'),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -383,8 +394,8 @@ class _BookingPageState extends State<BookingPage>
                 ),
               ),
             ),
-            const Text("اختر موقفك",
-                style: TextStyle(
+            Text(tr('choose_spot'),
+                style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: C.dark)),
@@ -397,7 +408,7 @@ class _BookingPageState extends State<BookingPage>
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                "نوع مركبتك: ${_userVehicleType.label}",
+                "${tr('your_vehicle_type')}: ${_vehicleTypeLabelFor(_userVehicleType)}",
                 style: TextStyle(
                   fontSize: 10,
                   color: _vehicleTypeColorFor(_userVehicleType),
@@ -415,7 +426,9 @@ class _BookingPageState extends State<BookingPage>
         ),
         const SizedBox(height: 10),
         StreamBuilder<List<RealSpot>>(
-          stream: FirebaseService.spotsStream(widget.zone.id),
+          stream: GuestService.isGuest
+              ? Stream.value(_buildGuestSpots())
+              : FirebaseService.spotsStream(widget.zone.id),
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -429,17 +442,17 @@ class _BookingPageState extends State<BookingPage>
             if (snap.hasError) {
               return Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text("خطأ في تحميل المواقف: ${snap.error}",
+                child: Text("${tr('err_load_spots')}: ${snap.error}",
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: C.error, fontSize: 12)),
               );
             }
             if (snap.data?.isEmpty ?? true) {
-              return const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text("لا توجد مواقف مضافة لهذه المنطقة",
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(tr('no_spots'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: C.muted, fontSize: 13)),
+                    style: const TextStyle(color: C.muted, fontSize: 13)),
               );
             }
 
@@ -477,9 +490,9 @@ class _BookingPageState extends State<BookingPage>
                     Icon(FontAwesomeIcons.circleExclamation,
                         size: 24, color: C.warning.withOpacity(0.6)),
                     const SizedBox(height: 8),
-                    const Text("لا توجد مواقف مناسبة لنوع مركبتك",
+                    Text(tr('no_suitable_spots'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: C.muted, fontSize: 12)),
+                        style: const TextStyle(color: C.muted, fontSize: 12)),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () => setState(() => _filterByVehicleType = false),
@@ -489,8 +502,8 @@ class _BookingPageState extends State<BookingPage>
                           color: C.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text("عرض كل المواقف",
-                            style: TextStyle(
+                        child: Text(tr('show_all_spots'),
+                            style: const TextStyle(
                                 color: C.primary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700)),
@@ -539,8 +552,8 @@ class _BookingPageState extends State<BookingPage>
                                 color: C.success.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text("مناسب",
-                                  style: TextStyle(
+                              child: Text(tr('suitable_badge'),
+                                  style: const TextStyle(
                                       fontSize: 8,
                                       fontWeight: FontWeight.w700,
                                       color: C.success)),
@@ -630,14 +643,38 @@ class _BookingPageState extends State<BookingPage>
           },
         ),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          _legend(C.success, "متاح"),
+          _legend(C.success, tr('legend_available')),
           const SizedBox(width: 12),
-          _legend(C.error, "محجوز"),
+          _legend(C.error, tr('legend_booked')),
           const SizedBox(width: 12),
-          _legend(C.primary, "مختار"),
+          _legend(C.primary, tr('legend_selected')),
         ]),
       ]),
     );
+  }
+
+  // ══ توليد مواقف تجريبية من spotTypes الخاصة بالمنطقة ══
+  List<RealSpot> _buildGuestSpots() {
+    final spots = <RealSpot>[];
+    int index = 1;
+    widget.zone.spotTypes.forEach((type, count) {
+      for (int i = 0; i < count; i++) {
+        final letter = String.fromCharCode(65 + (index ~/ 10));
+        final num = index % 10 == 0 ? 10 : index % 10;
+        // نصف المواقف محجوزة تجريبياً للواقعية
+        final status = (index % 3 == 0) ? 'OCCUPIED' : 'AVAILABLE';
+        spots.add(RealSpot(
+          docId:    'demo_spot_$index',
+          spotName: '$letter-$num',
+          spotType: type,
+            status: status == 'OCCUPIED' ? SpotStatus.occupied : SpotStatus.available,
+          lat:      widget.zone.lat + (index * 0.00002),
+          lng:      widget.zone.lng + (index * 0.00002),
+        ));
+        index++;
+      }
+    });
+    return spots;
   }
 
   // ── التحقق من مناسبة الموقف لنوع المركبة ──
@@ -664,6 +701,17 @@ class _BookingPageState extends State<BookingPage>
     if (userType == 'MOTORCYCLE' && spot == 'MOTORCYCLE') return true;
 
     return false;
+  }
+
+  // ── تسمية نوع المركبة ──
+  String _vehicleTypeLabelFor(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return tr('vehicle_standard');
+      case VehicleType.vip:        return tr('vehicle_vip');
+      case VehicleType.motorcycle: return tr('vehicle_motorcycle');
+      case VehicleType.electric:   return tr('vehicle_electric');
+      case VehicleType.disabled:   return tr('vehicle_disabled');
+    }
   }
 
   // ── أيقونة نوع المركبة ──
@@ -704,8 +752,8 @@ class _BookingPageState extends State<BookingPage>
         ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        const Text("نوع الحجز",
-            style: TextStyle(
+        Text(tr('booking_type'),
+            style: const TextStyle(
                 fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
         const SizedBox(height: 12),
         Row(
@@ -743,7 +791,7 @@ class _BookingPageState extends State<BookingPage>
                       color: sel ? C.white : C.muted,
                     ),
                     const SizedBox(height: 4),
-                    Text(type.label,
+                    Text(_bookingTypeLabel(type),
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -767,13 +815,30 @@ class _BookingPageState extends State<BookingPage>
   }
 
   String _priceForType(BookingType type) {
+    final cur = tr('currency');
     switch (type) {
       case BookingType.hourly:
-        return '${widget.zone.pricePerHour.toInt()} دج/س';
+        return '${widget.zone.pricePerHour.toInt()} $cur/${tr('per_hour_short')}';
       case BookingType.daily:
-        return '${widget.zone.pricePerDay.toInt()} دج/ي';
+        return '${widget.zone.pricePerDay.toInt()} $cur/${tr('per_day_short')}';
       case BookingType.weekly:
-        return '${widget.zone.pricePerWeek.toInt()} دج/أ';
+        return '${widget.zone.pricePerWeek.toInt()} $cur/${tr('per_week_short')}';
+    }
+  }
+
+  String _bookingTypeLabel(BookingType type) {
+    switch (type) {
+      case BookingType.hourly: return tr('booking_type_hourly');
+      case BookingType.daily:  return tr('booking_type_daily');
+      case BookingType.weekly: return tr('booking_type_weekly');
+    }
+  }
+
+  String _bookingTypeUnit(BookingType type) {
+    switch (type) {
+      case BookingType.hourly: return tr('unit_hour');
+      case BookingType.daily:  return tr('unit_day');
+      case BookingType.weekly: return tr('unit_week');
     }
   }
 
@@ -800,7 +865,7 @@ class _BookingPageState extends State<BookingPage>
         ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Text("مدة الحجز (${_bookingType.unit})",
+        Text("${tr('duration_label')} (${_bookingTypeUnit(_bookingType)})",
             style: const TextStyle(
                 fontSize: 13, fontWeight: FontWeight.w800, color: C.dark)),
         const SizedBox(height: 12),
@@ -814,7 +879,7 @@ class _BookingPageState extends State<BookingPage>
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
                     color: C.primary)),
-            Text(_bookingType.unit,
+            Text(_bookingTypeUnit(_bookingType),
                 style: const TextStyle(fontSize: 12, color: C.muted)),
           ]),
           const SizedBox(width: 24),
@@ -883,23 +948,23 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(children: [
-        _payRow("الموقف",
+        _payRow(tr('summary_spot'),
             _selectedSpot != null ? _selectedSpot!.spotName : "—", C.white),
         const SizedBox(height: 6),
         if (_selectedSpot != null) ...[
-          _payRow("النوع", _selectedSpot!.spotType, Colors.white70),
+          _payRow(tr('summary_type'), _selectedSpot!.spotType, Colors.white70),
           const SizedBox(height: 6),
         ],
-        _payRow("نوع الحجز", _bookingType.label, Colors.white70),
+        _payRow(tr('summary_booking_type'), _bookingType.label, Colors.white70),
         const SizedBox(height: 6),
-        _payRow("المدة", "$_quantity ${_bookingType.unit}", C.white),
+        _payRow(tr('summary_duration'), "$_quantity ${_bookingType.unit}", C.white),
         const SizedBox(height: 6),
-        _payRow("السعر/${_bookingType.unit}", "${_unitPrice().toInt()} دج",
+        _payRow(tr('summary_price_per'), "${_unitPrice().toInt()} ${tr('currency')}",
             Colors.white70),
         const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(color: Colors.white24)),
-        _payRow("الإجمالي", "${_total.toInt()} دج", C.accent, large: true),
+        _payRow(tr('summary_total'), "${_total.toInt()} ${tr('currency')}", C.accent, large: true),
       ]),
     );
   }
@@ -971,8 +1036,8 @@ class _BookingPageState extends State<BookingPage>
                 const SizedBox(width: 8),
                 Text(
                   _selectedSpot?.lat != null && _selectedSpot!.lat != 0
-                      ? "توجه إلى الموقف ${_selectedSpot!.spotName}"
-                      : "توجه إلى المنطقة",
+                      ? "${tr('navigate_to_spot_at')} ${_selectedSpot!.spotName}"
+                      : tr('navigate_to_zone'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -996,13 +1061,13 @@ class _BookingPageState extends State<BookingPage>
             decoration: BoxDecoration(
                 color: C.success,
                 borderRadius: BorderRadius.circular(12)),
-            child: const Row(
+            child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(FontAwesomeIcons.circleCheck,
                       color: Colors.white, size: 16),
                   SizedBox(width: 8),
-                  Text("تم تأكيد الحجز — اضغط للعودة",
+                  Text(tr('booking_confirmed_back'),
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -1021,12 +1086,12 @@ class _BookingPageState extends State<BookingPage>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: C.warning.withOpacity(0.4)),
               ),
-              child: const Row(
+              child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(FontAwesomeIcons.star, color: C.warning, size: 14),
                     SizedBox(width: 8),
-                    Text("قيّم تجربتك",
+                    Text(tr('rate_experience'),
                         style: TextStyle(
                             color: C.warning,
                             fontSize: 13,
@@ -1065,7 +1130,7 @@ class _BookingPageState extends State<BookingPage>
                     valueColor:
                     AlwaysStoppedAnimation(Colors.white))),
             const SizedBox(width: 10),
-            const Text("جاري تأكيد الحجز...",
+            Text(tr('processing_booking'),
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -1074,7 +1139,7 @@ class _BookingPageState extends State<BookingPage>
             const Icon(FontAwesomeIcons.creditCard,
                 color: Colors.white, size: 15),
             const SizedBox(width: 10),
-            Text("ادفع ${_total.toInt()} دج واحجز",
+            Text("${tr('pay_and_book')} ${_total.toInt()} ${tr('currency')}",
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -1108,20 +1173,20 @@ class _BookingPageState extends State<BookingPage>
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text("لاحقاً",
+            child: Text(tr('feedback_later'),
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w700)),
           ),
         ),
-        const Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text("كيف كانت تجربتك؟",
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(tr('feedback_banner_title'),
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w800)),
-          Text("قيّم تجربة الحجز الآن",
+          Text(tr('feedback_banner_subtitle'),
               style: TextStyle(color: Colors.white70, fontSize: 11)),
         ]),
         const Icon(FontAwesomeIcons.solidStar, color: C.warning, size: 28),
@@ -1132,7 +1197,16 @@ class _BookingPageState extends State<BookingPage>
   // ══ تنفيذ الحجز ══
   Future<void> _processBooking() async {
     if (_selectedSpot == null) {
-      setState(() => _errorMsg = 'يرجى اختيار موقف أولاً');
+      setState(() => _errorMsg = tr('err_choose_spot'));
+      return;
+    }
+
+    // وضع الضيف: محاكاة الحجز بدون Firebase
+    if (GuestService.isGuest) {
+      setState(() { _paying = true; _errorMsg = null; });
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      setState(() { _paying = false; _paid = true; });
       return;
     }
 
@@ -1169,10 +1243,10 @@ class _BookingPageState extends State<BookingPage>
         behavior: SnackBarBehavior.floating,
         shape:
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: const Row(children: [
+        content: Row(children: [
           Icon(FontAwesomeIcons.circleCheck, color: Colors.white, size: 14),
           SizedBox(width: 8),
-          Text("تم تأكيد الحجز بنجاح!",
+          Text(tr('booking_success'),
               style: TextStyle(
                   fontWeight: FontWeight.w700, fontFamily: 'Tajawal')),
         ]),
@@ -1181,7 +1255,7 @@ class _BookingPageState extends State<BookingPage>
       setState(() {
         _paying = false;
         _errorMsg =
-        'فشل الحجز: ${e.toString().replaceAll('Exception: ', '')}';
+        "${tr('booking_failed')}: ${e.toString().replaceAll('Exception: ', '')}";
       });
     }
   }

@@ -4,6 +4,8 @@ import 'main.dart';
 import 'register_page.dart';
 import 'home_shell.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
+import '../backend/guest_service.dart';
 
 // ════════════════════════════════════════════
 //  صفحة تسجيل الدخول — Firebase Auth
@@ -46,12 +48,11 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
-  // ══ تسجيل الدخول بـ Firebase ══
   Future<void> _handleLogin() async {
     final email = _emailCtrl.text.trim();
     final pass  = _passCtrl.text;
     if (email.isEmpty || pass.isEmpty) {
-      setState(() => _errorMsg = 'يرجى تعبئة جميع الحقول');
+      setState(() => _errorMsg = tr('err_fill_all'));
       return;
     }
     setState(() { _loading = true; _errorMsg = null; });
@@ -68,19 +69,28 @@ class _LoginPageState extends State<LoginPage>
   }
 
   String _friendlyError(String e) {
-    if (e.contains('invalid-credential') || e.contains('wrong-password'))
-      return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-    if (e.contains('user-not-found'))
-      return 'لا يوجد حساب بهذا البريد الإلكتروني';
-    if (e.contains('too-many-requests'))
-      return 'محاولات كثيرة، حاول لاحقاً';
-    if (e.contains('network'))
-      return 'تحقق من اتصالك بالإنترنت';
-    return 'حدث خطأ، حاول مجدداً';
+    if (e.contains('invalid-credential') || e.contains('wrong-password')) return tr('err_invalid_creds');
+    if (e.contains('user-not-found')) return tr('err_user_not_found');
+    if (e.contains('too-many-requests')) return tr('err_too_many');
+    if (e.contains('network')) return tr('err_network');
+    return tr('err_generic');
+  }
+
+  void _handleGuestLogin() {
+    GuestService.enterGuestMode();
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => const HomeShell()));
   }
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -136,39 +146,108 @@ class _LoginPageState extends State<LoginPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildLangSelector(),
+          const SizedBox(height: 12),
           _buildBrand(),
           const SizedBox(height: 22),
           _buildHeader(),
           const SizedBox(height: 24),
-          _buildField(
-            label: "البريد الإلكتروني",
-            icon:  FontAwesomeIcons.envelope,
-            ctrl:  _emailCtrl,
-            hint:  "user@example.com",
-            isPassword: false,
-          ),
+          _buildField(label: tr('email'), icon: FontAwesomeIcons.envelope,
+              ctrl: _emailCtrl, hint: "user@example.com", isPassword: false),
           const SizedBox(height: 16),
-          _buildField(
-            label: "كلمة المرور",
-            icon:  FontAwesomeIcons.lock,
-            ctrl:  _passCtrl,
-            hint:  "••••••••",
-            isPassword: true,
-          ),
+          _buildField(label: tr('password'), icon: FontAwesomeIcons.lock,
+              ctrl: _passCtrl, hint: "••••••••", isPassword: true),
           const SizedBox(height: 14),
           _buildOptions(),
-          // رسالة خطأ
           if (_errorMsg != null) ...[
             const SizedBox(height: 12),
             _buildErrorBanner(_errorMsg!),
           ],
           const SizedBox(height: 20),
           _buildLoginBtn(),
-          const SizedBox(height: 18),
-          _buildDemoBox(),
+          const SizedBox(height: 14),
+          _buildGuestBtn(),
           const SizedBox(height: 16),
           _buildSignupLink(),
         ],
+      ),
+    );
+  }
+
+  // ══ Dropdown اختيار اللغة ══
+  Widget _buildLangSelector() {
+    final currentCode = AppLocale.current.languageCode;
+
+    const langs = [
+      {'code': 'ar', 'label': 'العربية',  'short': 'AR'},
+      {'code': 'fr', 'label': 'Français', 'short': 'FR'},
+      {'code': 'en', 'label': 'English',  'short': 'EN'},
+    ];
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
+          color: C.light,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: C.border, width: 1.5),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: currentCode,
+            isDense: true,
+            icon: const Icon(FontAwesomeIcons.chevronDown, size: 10, color: C.muted),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: C.dark,
+              fontFamily: 'Tajawal',
+            ),
+            onChanged: (code) async {
+              if (code == null) return;
+              await AppLocale.setLanguage(code);
+              if (mounted) setState(() {});
+            },
+            items: langs.map((l) {
+              return DropdownMenuItem<String>(
+                value: l['code'],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // أيقونة الاختصار
+                    Container(
+                      width: 26,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [C.primary, C.secondary]),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        l['short']!,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          fontFamily: 'Tajawal',
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(l['label']!,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Tajawal')),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
   }
@@ -187,39 +266,30 @@ class _LoginPageState extends State<LoginPage>
             ),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(
-                color: C.primary.withOpacity(0.30),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
+              BoxShadow(color: C.primary.withOpacity(0.30), blurRadius: 16, offset: const Offset(0, 6)),
             ],
           ),
           child: const Icon(FontAwesomeIcons.squareParking, color: Colors.white, size: 28),
         ),
         const SizedBox(height: 12),
-        const Text(
-          "SmartParking",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: C.dark),
-        ),
+        const Text("SmartParking",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: C.dark)),
         const SizedBox(height: 3),
-        const Text(
-          "نظام الإدارة الذكي",
-          style: TextStyle(fontSize: 12, color: C.muted),
-        ),
+        Text(tr('app_subtitle'), style: const TextStyle(fontSize: 12, color: C.muted)),
       ],
     );
   }
 
   Widget _buildHeader() {
-    return const Column(
+    return Column(
       children: [
-        Text("مرحبا بك",
+        Text(tr('login_welcome'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: C.dark)),
-        SizedBox(height: 5),
-        Text("سجّل دخولك للوصول إلى التطبيق",
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: C.dark)),
+        const SizedBox(height: 5),
+        Text(tr('login_subtitle'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: C.muted)),
+            style: const TextStyle(fontSize: 13, color: C.muted)),
       ],
     );
   }
@@ -283,10 +353,8 @@ class _LoginPageState extends State<LoginPage>
             prefixIcon: Icon(icon, size: 15, color: C.muted),
             suffixIcon: isPassword
                 ? IconButton(
-              icon: Icon(
-                _showPass ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
-                size: 14, color: C.muted,
-              ),
+              icon: Icon(_showPass ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
+                  size: 14, color: C.muted),
               onPressed: () => setState(() => _showPass = !_showPass),
             )
                 : null,
@@ -307,12 +375,12 @@ class _LoginPageState extends State<LoginPage>
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           onPressed: _showForgotPasswordDialog,
-          child: const Text("نسيت كلمة المرور؟",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.primary)),
+          child: Text(tr('forgot_password'),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.primary)),
         ),
         Row(
           children: [
-            const Text("تذكّرني", style: TextStyle(fontSize: 12, color: C.muted)),
+            Text(tr('remember_me'), style: const TextStyle(fontSize: 12, color: C.muted)),
             const SizedBox(width: 6),
             SizedBox(
               width: 20, height: 20,
@@ -339,68 +407,59 @@ class _LoginPageState extends State<LoginPage>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('استعادة كلمة المرور',
-              textAlign: TextAlign.right,
-              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          title: Text(tr('forgot_dialog_title'),
+              textAlign: TextAlign.start,
+              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
           content: TextField(
             controller: ctrl,
-            textAlign: TextAlign.right,
+            textAlign: TextAlign.start,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              hintText: 'أدخل بريدك الإلكتروني',
-              prefixIcon: Icon(Icons.email_outlined, size: 18),
+            decoration: InputDecoration(
+              hintText: tr('forgot_dialog_hint'),
+              prefixIcon: const Icon(Icons.email_outlined, size: 18),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
+              child: Text(tr('cancel')),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: C.primary),
               onPressed: sending
                   ? null
                   : () async {
-                      final email = ctrl.text.trim();
-                      if (email.isEmpty) return;
-                      setDialogState(() => sending = true);
-                      try {
-                        await FirebaseService.sendPasswordResetEmail(email);
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: C.success,
-                            content: const Text(
-                                'تم إرسال رابط الاستعادة — تحقق من بريدك',
-                                style: TextStyle(fontFamily: 'Tajawal')),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
-                      } catch (e) {
-                        setDialogState(() => sending = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: C.error,
-                            content: Text(
-                                _friendlyError(e.toString()),
-                                style: const TextStyle(fontFamily: 'Tajawal')),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
+                final email = ctrl.text.trim();
+                if (email.isEmpty) return;
+                setDialogState(() => sending = true);
+                try {
+                  await FirebaseService.sendPasswordResetEmail(email);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: C.success,
+                    content: Text(tr('reset_sent'),
+                        style: const TextStyle(fontFamily: 'Tajawal')),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ));
+                } catch (e) {
+                  setDialogState(() => sending = false);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: C.error,
+                    content: Text(_friendlyError(e.toString()),
+                        style: const TextStyle(fontFamily: 'Tajawal')),
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              },
               child: sending
                   ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white)))
-                  : const Text('إرسال',
-                      style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : Text(tr('send_btn'),
+                  style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
             ),
           ],
         ),
@@ -415,35 +474,30 @@ class _LoginPageState extends State<LoginPage>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          gradient: _loading
-              ? null
-              : const LinearGradient(
-            begin: Alignment.centerRight,
-            end:   Alignment.centerLeft,
+          gradient: _loading ? null : const LinearGradient(
+            begin: Alignment.centerRight, end: Alignment.centerLeft,
             colors: [C.primary, C.secondary],
           ),
           color: _loading ? C.border : null,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: _loading
-              ? []
-              : [BoxShadow(color: C.primary.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 5))],
+          boxShadow: _loading ? [] :
+          [BoxShadow(color: C.primary.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 5))],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_loading) ...[
-              const SizedBox(
-                width: 18, height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)),
-              ),
+              const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation(Colors.white))),
               const SizedBox(width: 10),
-              const Text("جاري التحقق...",
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Text(tr('logging_in'),
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
             ] else ...[
               const Icon(Icons.login_rounded, color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              const Text("تسجيل الدخول",
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Text(tr('login_btn'),
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
             ],
           ],
         ),
@@ -451,25 +505,24 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _buildDemoBox() {
+  Widget _buildGuestBtn() {
     return GestureDetector(
-      onTap: () {
-        _emailCtrl.text = 'user@gmail.com';
-        _passCtrl.text  = 'user123';
-        setState(() {});
-      },
+      onTap: _handleGuestLogin,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: C.light,
+          color: C.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: C.border, width: 1.5),
         ),
-        child: const Center(
-          child: Text(
-            "اضغط لتعبئة بيانات التجربة",
-            style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w700),
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(FontAwesomeIcons.userSecret, size: 15, color: C.muted),
+            const SizedBox(width: 8),
+            Text(tr('guest_login'),
+                style: const TextStyle(color: C.muted, fontSize: 14, fontWeight: FontWeight.w700)),
+          ],
         ),
       ),
     );
@@ -480,13 +533,15 @@ class _LoginPageState extends State<LoginPage>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
-          child: const Text("إنشاء حساب جديد",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.primary,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const RegisterPage())),
+          child: Text(tr('signup_link'),
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w700, color: C.primary,
                   decoration: TextDecoration.underline, decorationColor: C.primary)),
         ),
         const SizedBox(width: 5),
-        const Text("ليس لديك حساب؟", style: TextStyle(fontSize: 13, color: C.muted)),
+        Text(tr('no_account'), style: const TextStyle(fontSize: 13, color: C.muted)),
       ],
     );
   }

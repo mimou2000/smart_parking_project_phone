@@ -73,7 +73,7 @@ class ZoneCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              zone.isAvailable ? "احجز" : "ممتلئ",
+              zone.isAvailable ? tr('book_btn') : tr('full'),
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -152,16 +152,16 @@ class ZoneCard extends StatelessWidget {
               _chip2(
                 zone.isAvailable
                     ? "${zone.availableSpots}/${zone.totalSpots}"
-                    : "ممتلئ",
+                    : tr('full'),
                 FontAwesomeIcons.squareParking,
                 zone.isAvailable ? C.success : C.error,
               ),
-              _chip2("${zone.pricePerHour.toInt()} دج/س",
+              _chip2("${zone.pricePerHour.toInt()} ${tr('price_per_hour_short')}",
                   FontAwesomeIcons.tag, C.warning),
               if (dLabel != null && sortBy == 'dijkstra')
                 _chip2(dLabel, FontAwesomeIcons.networkWired, C.primary)
               else
-                _chip2("${zone.distance} كم", FontAwesomeIcons.route, C.accent),
+                _chip2("${zone.distance} ${tr('distance_short')}", FontAwesomeIcons.route, C.accent),
             ],
           ),
         ],

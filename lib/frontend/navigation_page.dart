@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'main.dart';
 import 'parking_zone.dart';
+import '../backend/app_locale.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  صفحة التوجيه الداخلي
@@ -33,8 +34,8 @@ class NavStep {
   });
 
   String get distanceLabel {
-    if (distance < 1000) return '${distance.toInt()} م';
-    return '${(distance / 1000).toStringAsFixed(1)} كم';
+    if (distance < 1000) return '${distance.toInt()} ${tr('meters')}';
+    return '${(distance / 1000).toStringAsFixed(1)} ${tr('km')}';
   }
 }
 
@@ -60,10 +61,10 @@ class NavigationPage extends StatefulWidget {
 
   // ── هل نتوجه للموقف المحدد أم للمنطقة ──
   bool get hasSpotCoordinates => spotLat != null && spotLng != null && spotLat != 0 && spotLng != 0;
-  
+
   double get destinationLat => hasSpotCoordinates ? spotLat! : zone.lat;
   double get destinationLng => hasSpotCoordinates ? spotLng! : zone.lng;
-  String get destinationName => hasSpotCoordinates ? "موقف ${spotName ?? ''}" : zone.name;
+  String get destinationName => hasSpotCoordinates ? "${tr('spot_label')} ${spotName ?? ''}" : zone.name;
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -146,16 +147,18 @@ class _NavigationPageState extends State<NavigationPage>
       debugPrint('getVoices error: $e');
     }
 
-    // ── ضبط اللغة العربية ──
-    // جرّب بالترتيب: 'ar' ثم 'ar-SA' ثم 'ar-EG'
-    int result = await _tts.setLanguage('ar');
-    debugPrint('setLanguage ar → $result'); // 1=نجح، 0=فشل
+    // ── ضبط لغة TTS حسب لغة التطبيق ──
+    final langCode = AppLocale.current.languageCode;
+    final ttsLang = langCode == 'ar' ? 'ar' : langCode == 'fr' ? 'fr-FR' : 'en-US';
+    int result = await _tts.setLanguage(ttsLang);
+    debugPrint('setLanguage $ttsLang → $result');
 
-    if (result != 1) {
+    // fallback للعربية إن فشل
+    if (result != 1 && langCode == 'ar') {
       result = await _tts.setLanguage('ar-SA');
       debugPrint('setLanguage ar-SA → $result');
     }
-    if (result != 1) {
+    if (result != 1 && langCode == 'ar') {
       result = await _tts.setLanguage('ar-EG');
       debugPrint('setLanguage ar-EG → $result');
     }
@@ -169,7 +172,7 @@ class _NavigationPageState extends State<NavigationPage>
     setState(() => _ttsReady = true);
 
     await Future.delayed(const Duration(milliseconds: 600));
-    _speak('جاري تحضير التوجيه');
+    _speak(tr('preparing_navigation'));
   }
 
   Future<void> _speak(String text) async {
@@ -207,7 +210,7 @@ class _NavigationPageState extends State<NavigationPage>
       } catch (e) {
         setState(() {
           _loading = false;
-          _error = 'تعذّر تحديد موقعك';
+          _error = tr('cannot_locate');
         });
         return;
       }
@@ -264,7 +267,7 @@ class _NavigationPageState extends State<NavigationPage>
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (data['code'] != 'Ok') {
-        throw Exception('لا يوجد مسار متاح');
+        throw Exception(tr('route_unavailable'));
       }
 
       final route = data['routes'][0] as Map<String, dynamic>;
@@ -330,15 +333,15 @@ class _NavigationPageState extends State<NavigationPage>
       // إعلان صوتي بالبداية
       if (steps.isNotEmpty) {
         _speak(
-          'بدء التوجيه. المسافة الإجمالية '
-              '${_totalDistanceKm.toStringAsFixed(1)} كيلومتر. '
+          '${tr('navigation_to')} ${widget.destinationName}. '
+              '${_totalDistanceKm.toStringAsFixed(1)} ${tr('km')}. '
               '${steps[0].instruction}',
         );
       }
     } on TimeoutException {
       setState(() {
         _loading = false;
-        _error = 'انتهت مهلة الاتصال، تحقق من الإنترنت';
+        _error = tr('connection_timeout');
       });
     } catch (e) {
       setState(() {
@@ -356,7 +359,7 @@ class _NavigationPageState extends State<NavigationPage>
     final destDist = _distanceTo(lat, lng, widget.destinationLat, widget.destinationLng);
     if (destDist < 50) {
       setState(() => _arrived = true);
-      _speak('لقد وصلت إلى وجهتك، ${widget.destinationName}');
+      _speak('${tr('arrived')} ${widget.destinationName}');
       return;
     }
 
@@ -382,46 +385,50 @@ class _NavigationPageState extends State<NavigationPage>
 
   /// تنسيق المسافة: أقل من 1000 م → "350 م" / فوق 1000 م → "1.3 كم"
   String _formatDist(double meters) {
-    if (meters < 1000) return '${meters.toInt()} م';
-    return '${(meters / 1000).toStringAsFixed(1)} كم';
+    if (meters < 1000) return '${meters.toInt()} ${tr('meters')}';
+    return '${(meters / 1000).toStringAsFixed(1)} ${tr('km')}';
   }
 
-  // ══ بناء التعليمة النصية العربية ════════════════════════════════════
+  // ══ بناء التعليمة النصية حسب لغة التطبيق ════════════════════════════════════
   String _buildInstruction(String type, String modifier, double distance) {
+    final m = tr('meters');
+    final km = tr('km');
     final distLabel = distance < 1000
-        ? 'بعد ${distance.toInt()} متر'
-        : 'بعد ${(distance / 1000).toStringAsFixed(1)} كيلومتر';
+        ? 'after ${distance.toInt()} $m'
+        : 'after ${(distance / 1000).toStringAsFixed(1)} $km';
 
+    // نبني التعليمة بالإنجليزية كـ fallback آمن للـ TTS أيضاً،
+    // لكن نستخدم مفاتيح الترجمة للنصوص المعروضة في الواجهة
     switch (type) {
       case 'depart':
-        return 'ابدأ التوجيه';
+        return tr('preparing_navigation');
       case 'arrive':
-        return 'لقد وصلت إلى وجهتك';
+        return tr('arrived');
       case 'turn':
         switch (modifier) {
-          case 'left':          return '$distLabel، انعطف يساراً';
-          case 'right':         return '$distLabel، انعطف يميناً';
-          case 'sharp left':    return '$distLabel، انعطف يساراً بشكل حاد';
-          case 'sharp right':   return '$distLabel، انعطف يميناً بشكل حاد';
-          case 'slight left':   return '$distLabel، احرف قليلاً للیسار';
-          case 'slight right':  return '$distLabel، احرف قليلاً للیمین';
-          case 'uturn':         return '$distLabel، استدر كلياً';
-          default:              return '$distLabel، استمر';
+          case 'left':         return '$distLabel, turn left';
+          case 'right':        return '$distLabel, turn right';
+          case 'sharp left':   return '$distLabel, sharp left';
+          case 'sharp right':  return '$distLabel, sharp right';
+          case 'slight left':  return '$distLabel, slight left';
+          case 'slight right': return '$distLabel, slight right';
+          case 'uturn':        return '$distLabel, make a U-turn';
+          default:             return '$distLabel, continue';
         }
       case 'new name':
-        return '$distLabel، استمر في الطريق';
+        return '$distLabel, continue on road';
       case 'merge':
-        return '$distLabel، ادمج مع الطريق الرئيسي';
+        return '$distLabel, merge onto main road';
       case 'fork':
         return modifier == 'left'
-            ? '$distLabel، خذ الاتجاه الأيسر عند التفرّع'
-            : '$distLabel، خذ الاتجاه الأيمن عند التفرّع';
+            ? '$distLabel, take the left fork'
+            : '$distLabel, take the right fork';
       case 'roundabout':
-        return '$distLabel، ادخل الدوار';
+        return '$distLabel, enter the roundabout';
       case 'exit roundabout':
-        return 'اخرج من الدوار';
+        return 'exit the roundabout';
       case 'continue':
-        return '$distLabel، واصل السير';
+        return '$distLabel, continue';
       default:
         return '';
     }
@@ -648,8 +655,8 @@ class _NavigationPageState extends State<NavigationPage>
     final ratio = _totalDistanceKm > 0 ? remainingKm / _totalDistanceKm : 1.0;
     final remainingMin = (_totalDurationMin * ratio).round();
     final timeLabel = remainingMin >= 60
-        ? '${remainingMin ~/ 60}س ${remainingMin % 60}د'
-        : '$remainingMin د';
+        ? '${remainingMin ~/ 60}${tr('hours_short')} ${remainingMin % 60}${tr('minutes_short')}'
+        : '$remainingMin ${tr('minutes_short')}';
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -828,14 +835,14 @@ class _NavigationPageState extends State<NavigationPage>
             children: [
               // المسافة المتبقية
               Text(
-                '${_formatDist(remainingKm * 1000)} متبقية',
+                '${_formatDist(remainingKm * 1000)} ${tr('remaining')}',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w700),
               ),
               Text(
-                'من ${_formatDist(_totalDistanceKm * 1000)}',
+                trf('remaining_of', {'d': _formatDist(_totalDistanceKm * 1000)}),
                 style: const TextStyle(color: Colors.white54, fontSize: 10),
               ),
             ],
@@ -859,11 +866,11 @@ class _NavigationPageState extends State<NavigationPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${(progress * 100).toInt()}% مكتمل',
+                trf('covered_pct', {'n': '${(progress * 100).toInt()}'}),
                 style: const TextStyle(color: Colors.white38, fontSize: 9),
               ),
               Text(
-                'قطعت ${_formatDist(covered * 1000)}',
+                trf('covered_dist', {'d': _formatDist(covered * 1000)}),
                 style: const TextStyle(color: Colors.white38, fontSize: 9),
               ),
             ],
@@ -926,7 +933,7 @@ class _NavigationPageState extends State<NavigationPage>
                   children: [
                     if (!isLast && _currentStepIndex + 1 < _steps.length)
                       Text(
-                        'ثم: ${_steps[_currentStepIndex + 1].instruction}',
+                        '${tr('then_label')}: ${_steps[_currentStepIndex + 1].instruction}',
                         style: const TextStyle(
                             fontSize: 10, color: C.muted),
                         overflow: TextOverflow.ellipsis,
@@ -988,23 +995,23 @@ class _NavigationPageState extends State<NavigationPage>
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('إغلاق',
-                  style: TextStyle(
+              child: Text(tr('close'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       fontSize: 13)),
             ),
           ),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('وصلت! 🎉',
-                  style: TextStyle(
+              Text(tr('arrived'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w900)),
-              Text('تم الوصول إلى الموقف',
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(tr('arrived_subtitle'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
           const Icon(FontAwesomeIcons.circleCheck,
@@ -1028,8 +1035,8 @@ class _NavigationPageState extends State<NavigationPage>
     final ratio = _totalDistanceKm > 0 ? remainingKm / _totalDistanceKm : 1.0;
     final remainingMin = (_remainingDurationMin * ratio).round();
     final timeLabel = remainingMin >= 60
-        ? '${remainingMin ~/ 60}س ${remainingMin % 60}د'
-        : '$remainingMin د';
+        ? '${remainingMin ~/ 60}${tr('hours_short')} ${remainingMin % 60}${tr('minutes_short')}'
+        : '$remainingMin ${tr('minutes_short')}';
 
     return Container(
       decoration: BoxDecoration(
@@ -1060,17 +1067,17 @@ class _NavigationPageState extends State<NavigationPage>
             children: [
               _infoTile(
                   _formatDist(remainingKm * 1000),
-                  'متبقية',
+                  tr('remaining'),
                   FontAwesomeIcons.route,
                   C.primary),
               _infoTile(
                   timeLabel,
-                  'الوقت المتبقي',
+                  tr('time_remaining'),
                   FontAwesomeIcons.clock,
                   C.accent),
               _infoTile(
                   '${_currentStepIndex + 1}/${_steps.length}',
-                  'خطوة',
+                  tr('step'),
                   FontAwesomeIcons.listOl,
                   C.warning),
               // زر إعادة الحساب
@@ -1091,7 +1098,7 @@ class _NavigationPageState extends State<NavigationPage>
                         size: 16, color: C.muted),
                   ),
                   const SizedBox(height: 4),
-                  const Text('إعادة',
+                  Text(tr('recalculate'),
                       style: TextStyle(fontSize: 10, color: C.muted)),
                 ]),
               ),
@@ -1136,13 +1143,13 @@ class _NavigationPageState extends State<NavigationPage>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const CircularProgressIndicator(color: C.primary, strokeWidth: 3),
             const SizedBox(height: 16),
-            const Text('جاري حساب المسار...',
-                style: TextStyle(
+            Text(tr('calculating_route'),
+                style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: C.dark)),
             const SizedBox(height: 6),
-            Text('التوجيه إلى ${widget.destinationName}',
+            Text('${tr('navigation_to')} ${widget.destinationName}',
                 style: const TextStyle(fontSize: 11, color: C.muted)),
           ]),
         ),
@@ -1166,7 +1173,7 @@ class _NavigationPageState extends State<NavigationPage>
             const Icon(FontAwesomeIcons.triangleExclamation,
                 color: C.error, size: 36),
             const SizedBox(height: 14),
-            Text(_error ?? 'خطأ غير معروف',
+            Text(_error ?? tr('unknown_error'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                     fontSize: 14, color: C.dark, fontWeight: FontWeight.w700)),
@@ -1182,9 +1189,9 @@ class _NavigationPageState extends State<NavigationPage>
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: C.border),
                     ),
-                    child: const Text('رجوع',
+                    child: Text(tr('back'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: C.muted, fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -1202,9 +1209,9 @@ class _NavigationPageState extends State<NavigationPage>
                           colors: [C.primary, C.secondary]),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('إعادة المحاولة',
+                    child: Text(tr('retry'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ),

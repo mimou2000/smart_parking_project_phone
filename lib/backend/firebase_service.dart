@@ -198,12 +198,14 @@ class FirebaseService {
   static String? get uid => _auth.currentUser?.uid;
   static User? get currentUser => _auth.currentUser;
 
+  // ✅ الخصائص الجديدة المضافة
+  static String? get displayName => _auth.currentUser?.displayName;
+  static String? get email => _auth.currentUser?.email;
+
   /// تدفق حالة تسجيل الدخول — يُستخدم للحفاظ على الجلسة عند إعادة فتح التطبيق
   static Stream<User?> authStateChanges() => _auth.authStateChanges();
 
-  // ── دوال المصادقة ──
-  // ملاحظة: على تطبيقات الجوال Firebase Auth يحافظ على الجلسة تلقائياً
-  // بحيث ي��قى المستخدم مسجّلاً حتى بعد إغلاق التطبيق.
+  // ── دوال المصادقة ─ـ
   static Future<UserCredential> signIn(String email, String password) async {
     return await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
@@ -255,7 +257,7 @@ class FirebaseService {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
 
-  // ── بيانات المستخدم ──
+  // ── بيانات المستخدم ─ـ
   static Stream<Map<String, dynamic>?> userProfileStream() {
     if (uid == null) return Stream.value(null);
     return _db.collection('users').doc(uid).snapshots().map((s) => s.data());
@@ -266,7 +268,7 @@ class FirebaseService {
     await _db.collection('users').doc(uid).update(data);
   }
 
-  // ── الحصول على نوع مركبة المستخدم ──
+  // ── الحصول على نوع مركبة المستخدم ─ـ
   static Future<VehicleType> getUserVehicleType() async {
     if (uid == null) return VehicleType.standard;
     final doc = await _db.collection('users').doc(uid).get();
@@ -275,7 +277,7 @@ class FirebaseService {
     return VehicleType.fromString(data['vehicleType'] as String?);
   }
 
-  // ── Stream نوع مركبة المستخدم ──
+  // ── Stream نوع مركبة المستخدم ─ـ
   static Stream<VehicleType> userVehicleTypeStream() {
     if (uid == null) return Stream.value(VehicleType.standard);
     return _db.collection('users').doc(uid).snapshots().map((snap) {
@@ -285,7 +287,7 @@ class FirebaseService {
     });
   }
 
-  // ── Stream المواقف (مستخدم في BookingPage) ──
+  // ── Stream المواقف (مستخدم في BookingPage) ─ـ
   static Stream<List<RealSpot>> spotsStream(String zoneId) {
     return _db
         .collection('zones')
@@ -313,7 +315,7 @@ class FirebaseService {
     }).toList());
   }
 
-  // ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ──
+  // ── إنشاء حجز (تم تعديله ليتوافق مع BookingPage) ─ـ
   static Future<void> createBooking({
     required String zoneId,
     required String zoneName,
@@ -331,7 +333,7 @@ class FirebaseService {
   }) async {
     if (uid == null) throw Exception("يجب تسجيل الدخول أولاً");
 
-    // ── جلب اسم المستخدم من ملف الحساب لتخزينه مع الحجز ──
+    // ── جلب اسم المستخدم من ملف الحساب لتخزينه مع الحجز ─ـ
     String userName = '';
     String userEmail = currentUser?.email ?? '';
     String userPlate = '';
@@ -358,6 +360,7 @@ class FirebaseService {
     batch.set(bookingRef, {
       'user_id':        uid,
       'user_name':      userName,
+      'full_name':      userName,   // ← متوافق مع لوحة الإدارة
       'user_email':     userEmail,
       'user_plate':     userPlate,
       'zone_id':        zoneId,
@@ -370,7 +373,7 @@ class FirebaseService {
       'duration':       quantity,
       'total_price':    totalPrice,
       'total_cost':     totalPrice,
-      'status':         'active',
+      'status':         'pending',   // ← المدير يرى الحجز ويؤكد دخول السيارة
       'source':         'APP',
       'reservation_id': bookingRef.id,
       'zone_lat':       zoneLat,
@@ -382,7 +385,7 @@ class FirebaseService {
     });
 
     batch.update(spotRef, {
-      'status':     SpotStatus.occupied.toFirestore, // 'OCCUPIED'
+      'status':     SpotStatus.reserved.toFirestore, // 'RESERVED'
       'booked_by':  uid,
       'booking_id': bookingRef.id,
       'updated_at': FieldValue.serverTimestamp(),
@@ -391,9 +394,7 @@ class FirebaseService {
     await batch.commit();
   }
 
-  // ── حجوزاتي ──
-  // ملاحظة: نتجنّب orderBy على جانب الخادم لأنه يستلزم فهرس مركّب
-  // (user_id + created_at). عوضاً عن ذلك نُرتّب النتائج محلّياً.
+  // ── حجوزاتي ─ـ
   static Stream<List<BookingRecord>> myBookingsStream() {
     if (uid == null) return Stream.value([]);
 
@@ -429,7 +430,7 @@ class FirebaseService {
     });
   }
 
-  // ── إلغاء حجز ──
+  // ── إلغاء حجز ─ـ
   static Future<void> cancelBooking(BookingRecord b) async {
     final batch = _db.batch();
     final bookingRef = _db.collection('reservations').doc(b.id);
@@ -454,7 +455,7 @@ class FirebaseService {
     await batch.commit();
   }
 
-  // ── التقييمات ──
+  // ── التقييمات ─ـ
   static Stream<QuerySnapshot> getAllFeedback() {
     return _db.collection('feedback')
         .orderBy('timestamp', descending: true)

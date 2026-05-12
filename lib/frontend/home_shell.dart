@@ -4,7 +4,9 @@ import 'main.dart';
 import 'search_page.dart';
 import 'bookings_page.dart';
 import 'profile_page.dart';
+import 'login_page.dart';
 import '../backend/app_locale.dart';
+import '../backend/guest_service.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -26,11 +28,79 @@ class _HomeShellState extends State<HomeShell> {
     return ValueListenableBuilder<Locale>(
       valueListenable: AppLocale.notifier,
       builder: (context, locale, _) {
-        return Scaffold(
-          body: IndexedStack(index: _currentIndex, children: _pages),
-          bottomNavigationBar: _buildBottomNav(),
+        return ValueListenableBuilder<bool>(
+          valueListenable: guestModeNotifier,
+          builder: (context, isGuest, _) {
+            return Scaffold(
+              body: Column(
+                children: [
+                  if (isGuest) _buildGuestBanner(context),
+                  Expanded(
+                    child: IndexedStack(index: _currentIndex, children: _pages),
+                  ),
+                ],
+              ),
+              bottomNavigationBar: _buildBottomNav(),
+            );
+          },
         );
       },
+    );
+  }
+
+  // ══ شريط تحذير وضع الضيف ══
+  Widget _buildGuestBanner(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFFF3CD),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(FontAwesomeIcons.userSecret, size: 13, color: Color(0xFF856404)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  tr('guest_banner'),
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF856404)),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  GuestService.exitGuestMode();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) {
+                      // إعادة تحميل LoginPage
+                      // نستورد LoginPage هنا لتجنب circular import
+                      // استخدم: import 'login_page.dart'; في أعلى الملف
+                      return const _GoToLogin();
+                    }),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF856404),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tr('guest_login_now'),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -100,4 +170,11 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
   }
+}
+
+// ══ Widget مساعد: يُوجّه إلى LoginPage عند الضغط على "سجّل دخولك الآن" ══
+class _GoToLogin extends StatelessWidget {
+  const _GoToLogin();
+  @override
+  Widget build(BuildContext context) => const LoginPage();
 }

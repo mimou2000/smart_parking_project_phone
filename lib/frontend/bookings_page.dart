@@ -186,11 +186,11 @@ class _BookingsPageState extends State<BookingsPage>
 
     switch (b.status) {
       case 'active':
-        statusColor = C.success; statusLabel = "نشط";  statusIcon = FontAwesomeIcons.circleCheck;    break;
+        statusColor = C.success; statusLabel = tr('status_active');    statusIcon = FontAwesomeIcons.circleCheck;    break;
       case 'completed':
-        statusColor = C.primary; statusLabel = "مكتمل"; statusIcon = FontAwesomeIcons.flagCheckered; break;
+        statusColor = C.primary; statusLabel = tr('status_completed'); statusIcon = FontAwesomeIcons.flagCheckered; break;
       default:
-        statusColor = C.error;   statusLabel = "ملغي";  statusIcon = FontAwesomeIcons.circleXmark;
+        statusColor = C.error;   statusLabel = tr('status_cancelled'); statusIcon = FontAwesomeIcons.circleXmark;
     }
 
     // استخراج رقم الموقف من spotName (مثلاً "A-1" → "1") اختياري
@@ -230,10 +230,10 @@ class _BookingsPageState extends State<BookingsPage>
             alignment: WrapAlignment.end,
             spacing: 8, runSpacing: 6,
             children: [
-              _detail(FontAwesomeIcons.clock,         b.durationLabel,          C.accent),
-              _detail(FontAwesomeIcons.squareParking,  "موقف $spotDisplay",       C.primary),
-              _detail(FontAwesomeIcons.moneyBill,      "${b.totalPrice.toInt()} دج", C.warning),
-              _detail(FontAwesomeIcons.calendarDay,    b.dateLabel,               C.muted),
+              _detail(FontAwesomeIcons.clock,         _durationLabel(b),                       C.accent),
+              _detail(FontAwesomeIcons.squareParking,  "${tr('spot_label')} $spotDisplay",      C.primary),
+              _detail(FontAwesomeIcons.moneyBill,      "${b.totalPrice.toInt()} ${tr('currency')}", C.warning),
+              _detail(FontAwesomeIcons.calendarDay,    b.dateLabel,                              C.muted),
             ],
           ),
 if (b.status == 'active') ...[
@@ -251,11 +251,11 @@ if (b.status == 'active') ...[
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: C.error.withOpacity(0.3)),
                   ),
-                  child: const Row(children: [
-                    Icon(FontAwesomeIcons.ban, size: 11, color: C.error),
-                    SizedBox(width: 6),
-                    Text("إلغاء الحجز",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.error)),
+                  child: Row(children: [
+                    const Icon(FontAwesomeIcons.ban, size: 11, color: C.error),
+                    const SizedBox(width: 6),
+                    Text(tr('cancel_booking'),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.error)),
                   ]),
                 ),
               ),
@@ -268,11 +268,11 @@ if (b.status == 'active') ...[
                     gradient: const LinearGradient(colors: [C.primary, C.secondary]),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(children: [
-                    Icon(FontAwesomeIcons.diamondTurnRight, size: 11, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text("توجه للموقف",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  child: Row(children: [
+                    const Icon(FontAwesomeIcons.diamondTurnRight, size: 11, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(tr('navigate_to_spot'),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                   ]),
                 ),
               ),
@@ -319,16 +319,16 @@ if (b.status == 'active') ...[
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد الإلغاء', textAlign: TextAlign.start,
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
-        content: const Text('هل أنت متأكد من إلغاء هذا الحجز؟ سيتم استرداد الموقف.',
-            textAlign: TextAlign.start, style: TextStyle(fontFamily: 'Tajawal')),
+        title: Text(tr('confirm_cancel_title'), textAlign: TextAlign.start,
+            style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        content: Text(tr('confirm_cancel_body'),
+            textAlign: TextAlign.start, style: const TextStyle(fontFamily: 'Tajawal')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('no'))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: C.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('نعم، إلغاء', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            child: Text(tr('cancel_yes'), style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
           ),
         ],
       ),
@@ -342,18 +342,28 @@ if (b.status == 'active') ...[
           backgroundColor: C.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: const Text('تم إلغاء الحجز وتحرير الموقف',
-              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
+          content: Text(tr('booking_cancelled'),
+              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
         ));
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: C.error,
           behavior: SnackBarBehavior.floating,
-          content: Text('فشل الإلغاء: $e', style: const TextStyle(fontFamily: 'Tajawal')),
+          content: Text('${tr('cancel_failed')}: $e', style: const TextStyle(fontFamily: 'Tajawal')),
         ));
       }
     }
+  }
+
+  // Helper: localized duration label
+  String _durationLabel(BookingRecord b) {
+    final unit = switch (b.type) {
+      'daily'  => tr('unit_day'),
+      'weekly' => tr('unit_week'),
+      _        => tr('unit_hour'),
+    };
+    return '${b.quantity} $unit';
   }
 
   Widget _detail(IconData icon, String text, Color color) {

@@ -130,12 +130,12 @@ class ProfilePage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white24),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(FontAwesomeIcons.circleCheck, color: Color(0xFF34D399), size: 12),
-                    SizedBox(width: 6),
-                    Text("حساب موثّق", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+                    const Icon(FontAwesomeIcons.circleCheck, color: Color(0xFF34D399), size: 12),
+                    const SizedBox(width: 6),
+                    Text(tr('verified_account'), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -165,7 +165,7 @@ class ProfilePage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text("مركبتي", style: TextStyle(color: Colors.white60, fontSize: 11)),
+              Text(tr('my_vehicle'), style: const TextStyle(color: Colors.white60, fontSize: 11)),
               const SizedBox(height: 4),
               Text(plate.isNotEmpty ? plate : '—',
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2)),
@@ -182,7 +182,7 @@ class ProfilePage extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(vehicleType.label,
+                        Text(_vehicleTypeLabel(vehicleType),
                             style: TextStyle(color: _vehicleTypeColor(vehicleType), fontSize: 10, fontWeight: FontWeight.w700)),
                         const SizedBox(width: 4),
                         Icon(_vehicleTypeIcon(vehicleType), size: 10, color: _vehicleTypeColor(vehicleType)),
@@ -223,11 +223,11 @@ class ProfilePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _stat("$count", "حجوزات", FontAwesomeIcons.rectangleList, C.primary),
+          _stat("$count", tr('stat_bookings'), FontAwesomeIcons.rectangleList, C.primary),
           _divider(),
-          _stat("${paid.toInt()} دج", "مدفوع", FontAwesomeIcons.moneyBill, C.warning),
+          _stat("${paid.toInt()} ${tr('currency')}", tr('stat_paid'), FontAwesomeIcons.moneyBill, C.warning),
           _divider(),
-          _stat("$hours س", "إجمالي", FontAwesomeIcons.clock, C.accent),
+          _stat("$hours ${tr('hours_short')}", tr('stat_total'), FontAwesomeIcons.clock, C.accent),
         ],
       ),
     );
@@ -331,21 +331,21 @@ class ProfilePage extends StatelessWidget {
       context: ctx,
       builder: (dCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تعديل الملف الشخصي', textAlign: TextAlign.start,
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+        title: Text(tr('edit_profile_title'), textAlign: TextAlign.start,
+            style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
         content: TextField(
           controller: nameCtrl, textAlign: TextAlign.start,
-          decoration: const InputDecoration(labelText: 'الاسم'),
+          decoration: InputDecoration(labelText: tr('name_label')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(dCtx), child: Text(tr('cancel'))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: C.primary),
             onPressed: () async {
               await FirebaseService.updateProfile({'name': nameCtrl.text.trim()});
               Navigator.pop(dCtx);
             },
-            child: const Text('حفظ', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+            child: Text(tr('save'), style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
           ),
         ],
       ),
@@ -361,8 +361,8 @@ class ProfilePage extends StatelessWidget {
       builder: (dCtx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('تعديل بيانات المركبة', textAlign: TextAlign.start,
-              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
+          title: Text(tr('edit_vehicle_title'), textAlign: TextAlign.start,
+              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -370,10 +370,10 @@ class ProfilePage extends StatelessWidget {
               children: [
                 TextField(
                   controller: plateCtrl, textAlign: TextAlign.start,
-                  decoration: const InputDecoration(labelText: 'رقم اللوحة'),
+                  decoration: InputDecoration(labelText: tr('plate_label')),
                 ),
                 const SizedBox(height: 16),
-                const Text('نوع المركبة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(tr('vehicle_type_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                 const SizedBox(height: 8),
                 Wrap(
                   alignment: WrapAlignment.end,
@@ -399,7 +399,7 @@ class ProfilePage extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(type.label,
+                            Text(_vehicleTypeLabel(type),
                                 style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
@@ -417,7 +417,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('إلغاء')),
+            TextButton(onPressed: () => Navigator.pop(dCtx), child: Text(tr('cancel'))),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: C.primary),
               onPressed: () async {
@@ -427,12 +427,22 @@ class ProfilePage extends StatelessWidget {
                 });
                 Navigator.pop(dCtx);
               },
-              child: const Text('حفظ', style: TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
+              child: Text(tr('save'), style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal')),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _vehicleTypeLabel(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return tr('vehicle_standard');
+      case VehicleType.vip:        return tr('vehicle_vip');
+      case VehicleType.motorcycle: return tr('vehicle_motorcycle');
+      case VehicleType.electric:   return tr('vehicle_electric');
+      case VehicleType.disabled:   return tr('vehicle_disabled');
+    }
   }
 
   IconData _vehicleTypeIcon(VehicleType type) {

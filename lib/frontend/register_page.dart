@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
 import 'home_shell.dart';
 import '../backend/firebase_service.dart';
+import '../backend/app_locale.dart';
 
 // ════════════════════════════════════════════
 //  صفحة إنشاء الحساب — Firebase Auth
@@ -103,7 +104,7 @@ class _RegisterPageState extends State<RegisterPage>
       'Kangoo', 'Trafic', 'Master', 'Megane RS', 'Alpine A110',
     ],
     'Peugeot': [
-      '107', '108', '208', '308', '408', '508', '2008', '3008', '5008',
+      '107', '108', '208', '308', '408','406', '508', '2008', '3008', '5008',
       'Partner', 'Traveller', 'Expert', 'Boxer', 'Rifter', 'e-208', 'e-2008',
     ],
     'Dacia': [
@@ -232,15 +233,15 @@ class _RegisterPageState extends State<RegisterPage>
 
     if ([name, email, pass, confirm, plate].any((s) => s.isEmpty) ||
         _selectedBrand == null || _selectedModel == null) {
-      setState(() => _errorMsg = 'يرجى تعبئة جميع الحقول');
+      setState(() => _errorMsg = tr('err_fill_all'));
       return;
     }
     if (pass != confirm) {
-      setState(() => _errorMsg = 'كلمتا المرور غير متطابقتين');
+      setState(() => _errorMsg = tr('err_passwords_no_match'));
       return;
     }
     if (pass.length < 6) {
-      setState(() => _errorMsg = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      setState(() => _errorMsg = tr('err_password_short'));
       return;
     }
 
@@ -269,15 +270,22 @@ class _RegisterPageState extends State<RegisterPage>
   }
 
   String _friendlyError(String e) {
-    if (e.contains('email-already-in-use')) return 'هذا البريد مسجّل مسبقاً';
-    if (e.contains('invalid-email'))        return 'صيغة البريد الإلكتروني غير صحيحة';
-    if (e.contains('weak-password'))        return 'كلمة المرور ضعيفة جداً';
-    if (e.contains('network'))              return 'تحقق من اتصالك بالإنترنت';
-    return 'حدث خطأ، حاول مجدداً';
+    if (e.contains('email-already-in-use')) return tr('err_email_in_use');
+    if (e.contains('invalid-email'))        return tr('err_invalid_email');
+    if (e.contains('weak-password'))        return tr('err_weak_password');
+    if (e.contains('network'))              return tr('err_network');
+    return tr('err_generic');
   }
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppLocale.notifier,
+      builder: (context, locale, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: Container(
@@ -320,20 +328,20 @@ class _RegisterPageState extends State<RegisterPage>
           _buildHeader(),
           const SizedBox(height: 24),
 
-          _sectionLabel("المعلومات الشخصية", FontAwesomeIcons.user),
+          _sectionLabel(tr('personal_info'), FontAwesomeIcons.user),
           const SizedBox(height: 12),
-          _buildField(label: "الاسم الكامل",       icon: FontAwesomeIcons.userPen,  ctrl: _nameCtrl,    hint: "محمد أحمد",        isPassword: false),
+          _buildField(label: tr('full_name'),       icon: FontAwesomeIcons.userPen,  ctrl: _nameCtrl,    hint: tr('name_hint'),    isPassword: false),
           const SizedBox(height: 14),
-          _buildField(label: "البريد الإلكتروني",  icon: FontAwesomeIcons.envelope, ctrl: _emailCtrl,   hint: "user@example.com", isPassword: false),
+          _buildField(label: tr('email'),  icon: FontAwesomeIcons.envelope, ctrl: _emailCtrl,   hint: "user@example.com", isPassword: false),
           const SizedBox(height: 14),
-          _buildField(label: "كلمة المرور",        icon: FontAwesomeIcons.lock,     ctrl: _passCtrl,    hint: "••••••••",         isPassword: true,  showToggle: true, showValue: _showPass,    onToggle: () => setState(() => _showPass = !_showPass)),
+          _buildField(label: tr('password'),        icon: FontAwesomeIcons.lock,     ctrl: _passCtrl,    hint: "••••••••",         isPassword: true,  showToggle: true, showValue: _showPass,    onToggle: () => setState(() => _showPass = !_showPass)),
           const SizedBox(height: 14),
-          _buildField(label: "تأكيد كلمة المرور", icon: FontAwesomeIcons.lockOpen, ctrl: _confirmCtrl, hint: "••••••••",         isPassword: true,  showToggle: true, showValue: _showConfirm, onToggle: () => setState(() => _showConfirm = !_showConfirm)),
+          _buildField(label: tr('confirm_password'), icon: FontAwesomeIcons.lockOpen, ctrl: _confirmCtrl, hint: "••••••••",         isPassword: true,  showToggle: true, showValue: _showConfirm, onToggle: () => setState(() => _showConfirm = !_showConfirm)),
           const SizedBox(height: 22),
 
-          _sectionLabel("معلومات السيارة", FontAwesomeIcons.car),
+          _sectionLabel(tr('vehicle_info'), FontAwesomeIcons.car),
           const SizedBox(height: 12),
-          _buildField(label: "رقم لوحة السيارة", icon: FontAwesomeIcons.idCard, ctrl: _plateCtrl, hint: "123 ABC", isPassword: false),
+          _buildField(label: tr('plate_number'), icon: FontAwesomeIcons.idCard, ctrl: _plateCtrl, hint: tr('plate_hint'), isPassword: false),
           const SizedBox(height: 14),
           _buildVehicleTypeSelector(),
           const SizedBox(height: 14),
@@ -364,8 +372,8 @@ class _RegisterPageState extends State<RegisterPage>
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         // ── ماركة السيارة ──
-        const Text("ماركة السيارة",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+        Text(tr('car_brand'),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
         const SizedBox(height: 7),
         Autocomplete<String>(
           optionsBuilder: (TextEditingValue textEditingValue) {
@@ -396,7 +404,7 @@ class _RegisterPageState extends State<RegisterPage>
                 }
               },
               decoration: InputDecoration(
-                hintText: "ابحث... Toyota, BMW, Mercedes",
+                hintText: tr('car_brand_hint'),
                 hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                 filled: true,
                 fillColor: C.white,
@@ -446,8 +454,8 @@ class _RegisterPageState extends State<RegisterPage>
         const SizedBox(height: 14),
 
         // ── طراز السيارة ──
-        const Text("طراز السيارة",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+        Text(tr('car_model'),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
         const SizedBox(height: 7),
 
         if (_selectedBrand == null)
@@ -456,7 +464,7 @@ class _RegisterPageState extends State<RegisterPage>
             enabled: false,
             textAlign: TextAlign.right,
             decoration: InputDecoration(
-              hintText: "اختر الماركة أولاً",
+              hintText: tr('choose_brand_first'),
               hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
               filled: true,
               fillColor: const Color(0xFFF1F5F9),
@@ -491,7 +499,7 @@ class _RegisterPageState extends State<RegisterPage>
                   }
                 },
                 decoration: InputDecoration(
-                  hintText: "ابحث عن الطراز...",
+                  hintText: tr('search_model_hint'),
                   hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                   filled: true,
                   fillColor: C.white,
@@ -586,22 +594,22 @@ class _RegisterPageState extends State<RegisterPage>
         const Text("SmartParking",
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: C.dark)),
         const SizedBox(height: 3),
-        const Text("نظام الإدارة الذكي",
-            style: TextStyle(fontSize: 12, color: C.muted)),
+        Text(tr('app_subtitle'),
+            style: const TextStyle(fontSize: 12, color: C.muted)),
       ],
     );
   }
 
   Widget _buildHeader() {
-    return const Column(
+    return Column(
       children: [
-        Text("إنشاء حساب جديد",
+        Text(tr('register_title'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: C.dark)),
-        SizedBox(height: 5),
-        Text("أدخل بياناتك للانضمام إلى المنصة",
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: C.dark)),
+        const SizedBox(height: 5),
+        Text(tr('register_subtitle'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: C.muted)),
+            style: const TextStyle(fontSize: 13, color: C.muted)),
       ],
     );
   }
@@ -740,8 +748,8 @@ class _RegisterPageState extends State<RegisterPage>
                       valueColor:
                       AlwaysStoppedAnimation(Colors.white))),
               const SizedBox(width: 10),
-              const Text("جاري إنشاء الحساب...",
-                  style: TextStyle(
+              Text(tr('creating_account'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
@@ -749,8 +757,8 @@ class _RegisterPageState extends State<RegisterPage>
               const Icon(FontAwesomeIcons.userPlus,
                   color: Colors.white, size: 16),
               const SizedBox(width: 10),
-              const Text("إنشاء الحساب",
-                  style: TextStyle(
+              Text(tr('create_account_btn'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
@@ -767,8 +775,8 @@ class _RegisterPageState extends State<RegisterPage>
       children: [
         GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Text("تسجيل الدخول",
-              style: TextStyle(
+          child: Text(tr('login_link'),
+              style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: C.primary,
@@ -776,8 +784,8 @@ class _RegisterPageState extends State<RegisterPage>
                   decorationColor: C.primary)),
         ),
         const SizedBox(width: 5),
-        const Text("لديك حساب بالفعل؟",
-            style: TextStyle(fontSize: 13, color: C.muted)),
+        Text(tr('has_account'),
+            style: const TextStyle(fontSize: 13, color: C.muted)),
       ],
     );
   }
@@ -789,8 +797,8 @@ class _RegisterPageState extends State<RegisterPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        const Text("نوع المركبة",
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
+        Text(tr('vehicle_type_label'),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.dark)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.end,
@@ -818,7 +826,7 @@ class _RegisterPageState extends State<RegisterPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      type.label,
+                      _vehicleTypeLabel(type),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -839,6 +847,16 @@ class _RegisterPageState extends State<RegisterPage>
         ),
       ],
     );
+  }
+
+  String _vehicleTypeLabel(VehicleType type) {
+    switch (type) {
+      case VehicleType.standard:   return tr('vehicle_standard');
+      case VehicleType.vip:        return tr('vehicle_vip');
+      case VehicleType.motorcycle: return tr('vehicle_motorcycle');
+      case VehicleType.electric:   return tr('vehicle_electric');
+      case VehicleType.disabled:   return tr('vehicle_disabled');
+    }
   }
 
   IconData _vehicleTypeIcon(VehicleType type) {

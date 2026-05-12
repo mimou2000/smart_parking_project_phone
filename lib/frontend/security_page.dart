@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'main.dart';
-import 'login_page.dart';
 import '../backend/firebase_service.dart';
 import '../backend/app_locale.dart';
 
 // ════════════════════════════════════════════
-//  صفحة الأمان وكلمة المرور
+//  صفحة الأمان — تغيير كلمة المرور
 // ════════════════════════════════════════════
 class SecurityPage extends StatefulWidget {
   const SecurityPage({super.key});
@@ -25,7 +24,6 @@ class _SecurityPageState extends State<SecurityPage> {
   bool _showConfirm = false;
   bool _loading = false;
   String? _errorMsg;
-  String? _successMsg;
 
   @override
   void dispose() {
@@ -35,183 +33,144 @@ class _SecurityPageState extends State<SecurityPage> {
     super.dispose();
   }
 
-  String? _validate() {
-    if (_currentCtrl.text.isEmpty) return 'يرجى إدخال كلمة المرور الحالية';
-    if (_newCtrl.text.length < 6) {
-      return 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل';
-    }
-    if (_newCtrl.text != _confirmCtrl.text) {
-      return 'كلمة المرور الجديدة غير متطابقة';
-    }
-    if (_newCtrl.text == _currentCtrl.text) {
-      return 'كلمة المرور الجديدة يجب أن تختلف عن الحالية';
-    }
-    return null;
-  }
-
   String _friendlyError(String e) {
     if (e.contains('wrong-password') || e.contains('invalid-credential')) {
-      return 'كلمة المرور الحالية غير صحيحة';
+      return tr('err_invalid_creds');
     }
-    if (e.contains('weak-password')) return 'كلمة المرور الجديدة ضعيفة';
-    if (e.contains('requires-recent-login')) {
-      return 'يرجى تسجيل الدخول من جديد لأسباب أمنية';
-    }
-    if (e.contains('network')) return 'تحقق من اتصالك بالإنترنت';
-    return 'حدث خطأ، حاول مجدداً';
+    if (e.contains('weak-password')) return tr('err_weak_password');
+    if (e.contains('too-many-requests')) return tr('err_too_many');
+    if (e.contains('network')) return tr('err_network');
+    return tr('password_change_failed');
   }
 
   Future<void> _handleChange() async {
-    final err = _validate();
-    if (err != null) {
-      setState(() {
-        _errorMsg = err;
-        _successMsg = null;
-      });
+    final current = _currentCtrl.text;
+    final newPass = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
+
+    if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+      setState(() => _errorMsg = tr('err_fill_all'));
       return;
     }
+    if (newPass != confirm) {
+      setState(() => _errorMsg = tr('err_passwords_no_match'));
+      return;
+    }
+    if (newPass.length < 6) {
+      setState(() => _errorMsg = tr('err_password_short'));
+      return;
+    }
+
     setState(() {
       _loading = true;
       _errorMsg = null;
-      _successMsg = null;
     });
+
     try {
       await FirebaseService.changePassword(
-        currentPassword: _currentCtrl.text,
-        newPassword: _newCtrl.text,
+        currentPassword: current,
+        newPassword: newPass,
       );
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _successMsg = tr('security_password_changed');
-        _currentCtrl.clear();
-        _newCtrl.clear();
-        _confirmCtrl.clear();
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: C.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text(
+            tr('password_changed'),
+            style: const TextStyle(
+                fontFamily: 'Tajawal', fontWeight: FontWeight.w700),
+          ),
+        ),
+      );
+      _currentCtrl.clear();
+      _newCtrl.clear();
+      _confirmCtrl.clear();
+      Navigator.pop(context);
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _errorMsg = _friendlyError(e.toString());
-      });
+      setState(() => _errorMsg = _friendlyError(e.toString()));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _handleSendReset() async {
-    final email = FirebaseService.currentUser?.email;
-    if (email == null) return;
-    try {
-      await FirebaseService.sendPasswordResetEmail(email);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: C.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        content: const Text('تم إرسال رابط الاستعادة إلى بريدك',
-            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
-      ));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: C.error,
-        behavior: SnackBarBehavior.floating,
-        content: Text(_friendlyError(e.toString()),
-            style: const TextStyle(fontFamily: 'Tajawal')),
-      ));
-    }
-  }
-
-  Future<void> _handleSignOutAll() async {
-    await FirebaseService.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (_) => false,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Locale>(
       valueListenable: AppLocale.notifier,
-      builder: (context, locale, _) {
-        final email = FirebaseService.currentUser?.email ?? '—';
-        return Scaffold(
-          backgroundColor: C.light,
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildHeader(email),
-                const SizedBox(height: 16),
-                _buildPasswordCard(),
-                const SizedBox(height: 12),
-                _buildAccountActions(),
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (context, locale, _) => _buildScaffold(context),
     );
   }
 
-  Widget _buildHeader(String email) {
+  Widget _buildScaffold(BuildContext context) {
+    return Scaffold(
+      backgroundColor: C.light,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildCard(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final isRtl = AppLocale.isRtl;
     return Container(
-      width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [C.panelDark1, C.panelDark2, C.panelDark3],
+          stops: [0.0, 0.5, 1.0],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: SafeArea(
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 36),
-                  Text(tr('security_title'),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: Icon(
-                          AppLocale.current.languageCode == 'ar'
-                              ? FontAwesomeIcons.arrowRight
-                              : FontAwesomeIcons.arrowLeft,
-                          color: Colors.white, size: 14),
-                    ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [C.primary, C.secondary]),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+                  child: Icon(
+                    isRtl
+                        ? FontAwesomeIcons.arrowRight
+                        : FontAwesomeIcons.arrowLeft,
+                    color: Colors.white,
+                    size: 13,
+                  ),
                 ),
-                child: const Icon(FontAwesomeIcons.shieldHalved,
-                    color: Colors.white, size: 26),
               ),
-              const SizedBox(height: 10),
-              Text(email,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(
+                tr('security_title'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 36),
             ],
           ),
         ),
@@ -219,86 +178,122 @@ class _SecurityPageState extends State<SecurityPage> {
     );
   }
 
-  Widget _buildPasswordCard() {
+  Widget _buildCard() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: C.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3)),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(FontAwesomeIcons.lock, size: 14, color: C.primary),
-              Text(tr('security_change_password'),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [C.primary, C.secondary]),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(FontAwesomeIcons.shieldHalved,
+                    size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  tr('change_password'),
                   style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: C.dark)),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: C.dark,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          _buildField(
-            label: tr('security_current_password'),
+          const SizedBox(height: 20),
+          _passwordField(
+            label: tr('current_password'),
             ctrl: _currentCtrl,
             show: _showCurrent,
             onToggle: () => setState(() => _showCurrent = !_showCurrent),
-            hint: '••••••••',
+            icon: FontAwesomeIcons.lock,
           ),
           const SizedBox(height: 14),
-          _buildField(
-            label: tr('security_new_password'),
+          _passwordField(
+            label: tr('new_password'),
             ctrl: _newCtrl,
             show: _showNew,
             onToggle: () => setState(() => _showNew = !_showNew),
-            hint: '••••••••',
+            icon: FontAwesomeIcons.key,
           ),
           const SizedBox(height: 14),
-          _buildField(
-            label: tr('security_confirm_new_password'),
+          _passwordField(
+            label: tr('confirm_new_password'),
             ctrl: _confirmCtrl,
             show: _showConfirm,
             onToggle: () => setState(() => _showConfirm = !_showConfirm),
-            hint: '••••••••',
+            icon: FontAwesomeIcons.lockOpen,
           ),
           if (_errorMsg != null) ...[
-            const SizedBox(height: 12),
-            _banner(_errorMsg!, C.error, FontAwesomeIcons.circleXmark),
+            const SizedBox(height: 14),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: C.error.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: C.error.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(FontAwesomeIcons.circleXmark,
+                      size: 13, color: C.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMsg!,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: C.error,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-          if (_successMsg != null) ...[
-            const SizedBox(height: 12),
-            _banner(_successMsg!, C.success, FontAwesomeIcons.circleCheck),
-          ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 22),
           GestureDetector(
             onTap: _loading ? null : _handleChange,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 gradient: _loading
                     ? null
-                    : const LinearGradient(colors: [C.primary, C.secondary]),
+                    : const LinearGradient(
+                        colors: [C.primary, C.secondary]),
                 color: _loading ? C.border : null,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: _loading
                     ? []
                     : [
                         BoxShadow(
-                            color: C.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4)),
+                          color: C.primary.withOpacity(0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
+                        )
                       ],
               ),
               child: Row(
@@ -306,27 +301,34 @@ class _SecurityPageState extends State<SecurityPage> {
                 children: [
                   if (_loading) ...[
                     const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation(Colors.white))),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Text(tr('loading'),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      tr('loading'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ] else ...[
-                    const Icon(FontAwesomeIcons.check,
+                    const Icon(FontAwesomeIcons.shieldHalved,
                         color: Colors.white, size: 14),
                     const SizedBox(width: 8),
-                    Text(tr('security_update'),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      tr('change_password'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -337,28 +339,29 @@ class _SecurityPageState extends State<SecurityPage> {
     );
   }
 
-  Widget _buildField({
+  Widget _passwordField({
     required String label,
     required TextEditingController ctrl,
     required bool show,
     required VoidCallback onToggle,
-    required String hint,
+    required IconData icon,
   }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w700, color: C.dark)),
-        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w700, color: C.dark),
+        ),
+        const SizedBox(height: 7),
         TextField(
           controller: ctrl,
           obscureText: !show,
-          textAlign: TextAlign.right,
           textDirection: TextDirection.ltr,
           style: const TextStyle(fontSize: 14, color: C.dark),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: '••••••••',
             hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
             filled: true,
             fillColor: C.white,
@@ -371,118 +374,19 @@ class _SecurityPageState extends State<SecurityPage> {
               borderSide: const BorderSide(color: C.primary, width: 1.5),
             ),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            prefixIcon:
-                const Icon(FontAwesomeIcons.lock, size: 14, color: C.muted),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            prefixIcon: Icon(icon, size: 14, color: C.muted),
             suffixIcon: IconButton(
               icon: Icon(
-                  show ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
-                  size: 14,
-                  color: C.muted),
+                show ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
+                size: 14,
+                color: C.muted,
+              ),
               onPressed: onToggle,
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _banner(String msg, Color color, IconData icon) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(msg,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(width: 8),
-          Icon(icon, size: 13, color: color),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountActions() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: C.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Column(
-        children: [
-          _actionTile(
-            icon: FontAwesomeIcons.envelope,
-            color: C.accent,
-            label: tr('security_reset_email'),
-            onTap: _handleSendReset,
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          _actionTile(
-            icon: FontAwesomeIcons.rightFromBracket,
-            color: C.error,
-            label: tr('security_signout_all'),
-            onTap: _handleSignOutAll,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionTile({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(
-                AppLocale.current.languageCode == 'ar'
-                    ? FontAwesomeIcons.angleLeft
-                    : FontAwesomeIcons.angleRight,
-                size: 12,
-                color: C.muted),
-            Row(children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: color)),
-              const SizedBox(width: 12),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 14, color: color),
-              ),
-            ]),
-          ],
-        ),
-      ),
     );
   }
 }
